@@ -3,7 +3,18 @@
 # transitive package, which makes it impossible to see what the project itself
 # actually depends on and breaks whenever a sub-dependency is repinned.
 
+# Web API. python-multipart is not imported by our code but FastAPI requires it
+# to parse the multipart body /api/upload receives; without it the endpoint
+# raises at import time, so it is a direct dependency in every sense that matters.
+fastapi==0.141.1
+uvicorn==0.52.4
+python-multipart==0.0.32
+pydantic==2.13.4
+
+# app.py only -- the Streamlit dev harness, kept as a second front end over the
+# same core/. It is not the deliverable; backend/ + frontend/ are.
 streamlit==1.62.0
+
 plotly==6.9.0
 pandas==3.0.5
 numpy==2.5.2
