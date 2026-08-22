@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core import router  # noqa: E402
 from core.profiler import profile_dataframe  # noqa: E402
-from core.worlds import timeseries  # noqa: E402
+from core.worlds import geo, timeseries  # noqa: E402
 
 SAMPLES = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "samples")
 
@@ -155,8 +155,61 @@ def test_timeseries() -> None:
         check("bad freq raises ValueError", True, str(exc))
 
 
+def test_geo() -> None:
+    print("=" * 72)
+    print("GEO")
+    print("-" * 72)
+
+    df, routing = load("air_quality_geo.csv")
+    out = geo.build(df, routing)
+
+    check("builds", out["status"] == "ok")
+    check("has map", "map" in out["figures"])
+    check("zoom is computed, not hardcoded", out["stats"]["zoom"] != geo.DEFAULT_ZOOM,
+          f"zoom={out['stats']['zoom']} from bounds {out['stats']['bounds']}")
+    print(f"    stats: {json.dumps(out['stats'])}")
+    check_code_is_real("geo", df, out)
+
+    # Time filter must actually reduce the point count.
+    time_col = routing["time_col"]
+    stamps = pd.to_datetime(df[time_col], errors="coerce", format="mixed").dropna()
+    midpoint = stamps.min() + (stamps.max() - stamps.min()) / 2
+    filtered = geo.build(df, routing, time_filter=(stamps.min(), midpoint))
+    check(
+        "time_filter reduces the points plotted",
+        filtered["stats"]["n_points"] < out["stats"]["n_points"],
+        f"{out['stats']['n_points']} -> {filtered['stats']['n_points']}",
+    )
+    check_code_is_real("geo[filtered]", df, filtered)
+
+    print("-" * 72)
+    print("  degradation:")
+
+    nulls = df.copy()
+    nulls.loc[:99, routing["lat_col"]] = None
+    result = geo.build(nulls, routing)
+    check("null coordinates dropped and reported",
+          any("coordinate" in w for w in result["warnings"]),
+          result["warnings"][0] if result["warnings"] else "no warning")
+
+    identical = pd.DataFrame({
+        "lat": [51.5] * 20, "lon": [-0.12] * 20, "pm25": list(range(20)),
+    })
+    result = geo.build(identical, {"lat_col": "lat", "lon_col": "lon", "target_col": "pm25"})
+    check("identical points do not produce infinite zoom",
+          result["status"] == "ok" and result["stats"]["zoom"] == geo.DEFAULT_ZOOM,
+          f"fell back to DEFAULT_ZOOM={geo.DEFAULT_ZOOM}")
+    check_code_is_real("geo[identical]", identical, result)
+
+    empty = pd.DataFrame({"lat": [None] * 5, "lon": [None] * 5, "pm25": [1, 2, 3, 4, 5]})
+    result = geo.build(empty, {"lat_col": "lat", "lon_col": "lon", "target_col": "pm25"})
+    check("all-null coordinates degrade", result["status"] == "insufficient_data",
+          result["message"])
+
+
 if __name__ == "__main__":
     test_timeseries()
+    test_geo()
     print("=" * 72)
     print("ALL PASS" if FAILURES == 0 else f"{FAILURES} FAILURE(S)")
     raise SystemExit(1 if FAILURES else 0)
