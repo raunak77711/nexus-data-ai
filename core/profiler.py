@@ -39,6 +39,8 @@ MIN_PLAUSIBLE_YEAR = 1900
 MAX_PLAUSIBLE_YEAR = 2100
 CATEGORICAL_MAX_UNIQUE = 20
 CATEGORICAL_MAX_RATIO = 0.05
+# Below this row count the ratio test is skipped entirely -- see _is_categorical.
+CATEGORICAL_RATIO_MIN_ROWS = 200
 TOP_VALUES_LIMIT = 10
 
 
@@ -95,25 +97,41 @@ def _in_range(series: pd.Series, low: float, high: float) -> bool:
 
 
 def _is_categorical(n_unique: int, n_rows: int) -> bool:
-    """Low absolute cardinality AND low cardinality relative to the dataset.
+    """Low absolute cardinality, plus a ratio test that only applies to real files.
 
-    WHY both conditions: the absolute cap alone would call a 20-row table's
-    primary key a category; the ratio alone would call a 10,000-value ID column
-    in a 10-million-row table a category. Together they describe what a human
-    means by "a category" -- a small fixed vocabulary repeated many times.
+    WHY two conditions at all: the absolute cap alone would call a 20-row
+    table's primary key a category; the ratio alone would call a 10,000-value
+    ID column in a 10-million-row table a category. Together they describe what
+    a human means by "a category" -- a small fixed vocabulary repeated many
+    times.
+
+    WHY the ratio is gated on row count: n_unique/n_rows < 0.05 is a statement
+    about repetition, and repetition is only measurable once there are enough
+    rows for a value to repeat. On a 100-row file the rule permits at most 4
+    distinct values, so a perfectly ordinary 6-region column is classified as
+    text and the entity-split charts silently disappear. That is a false
+    negative caused by sample size, not by the data.
+
+    Below CATEGORICAL_RATIO_MIN_ROWS the absolute cap carries the decision
+    alone. 200 rows is where the ratio first admits the full 20-value cap
+    (20/200 = 0.10 still fails, but the gap has closed enough that the cap is
+    the binding constraint for realistic vocabularies) and it is comfortably
+    above the size at which a handful of repeats is coincidence. The cost of
+    dropping the ratio on small files is bounded: with fewer than 200 rows, a
+    column with <=20 distinct values is at worst a slightly odd grouping, never
+    the million-value ID column the ratio exists to reject.
 
     Applied to numeric columns too, deliberately. A column holding 8 distinct
     integers across 5,000 rows is a category code (region_id, star rating), and
     taking its mean would be meaningless.
-
-    KNOWN LIMITATION: the ratio makes categorical detection impossible on small
-    files -- at 100 rows nothing can have more than 4 distinct values and still
-    qualify. Downstream code must tolerate a profile with zero categoricals
-    rather than assuming one exists. See README "Limitations".
     """
     if n_rows == 0 or n_unique == 0:
         return False
-    return n_unique <= CATEGORICAL_MAX_UNIQUE and (n_unique / n_rows) < CATEGORICAL_MAX_RATIO
+    if n_unique > CATEGORICAL_MAX_UNIQUE:
+        return False
+    if n_rows < CATEGORICAL_RATIO_MIN_ROWS:
+        return True
+    return (n_unique / n_rows) < CATEGORICAL_MAX_RATIO
 
 
 def _classify(series: pd.Series, name: str, n_rows: int, n_unique: int) -> str:
