@@ -1,0 +1,35 @@
+# Everything the backend image must not carry.
+#
+# Two of these are correctness issues rather than size ones:
+#   venv/          holds Windows binaries and a Python 3.14 site-packages tree;
+#                  copied into a Linux 3.12 image it would shadow the container's
+#                  own installs with libraries that cannot load.
+#   .env           contains a real API key. It reaches the container through
+#                  compose's `environment:` block at RUN time, which keeps it out
+#                  of the image layers -- an ENV baked into an image is readable
+#                  by anyone who can pull it.
+
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+.env
+
+.git/
+.gitignore
+.dockerignore
+
+frontend/
+node_modules/
+
+samples/
+README.md
+docker-compose.yml
+
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

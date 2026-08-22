@@ -1,0 +1,89 @@
+# Development compose: two services, both with hot reload.
+#
+# This is a DEV setup and says so -- source is bind-mounted, both servers run
+# their own reloading dev server, and nothing is built into an image beyond the
+# dependencies. A production compose would build the frontend to static files,
+# serve them from a CDN or nginx, and run uvicorn behind gunicorn with several
+# workers -- which, note, this application cannot currently do, because the
+# session store is a process-local dict (see backend/session.py).
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    # The container is named so the frontend service can be told to wait for it
+    # and so logs are readable.
+    container_name: adw-backend
+    ports:
+      - "8000:8000"
+    environment:
+      # Passed through from the host's shell or .env file rather than written
+      # here. A key in a committed compose file is a leaked key.
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      # Unbuffered so uvicorn's logs appear in `docker compose logs` as they
+      # happen instead of arriving in blocks when the buffer flushes.
+      PYTHONUNBUFFERED: "1"
+      # Keeps .pyc files out of the bind-mounted source tree, where they would
+      # be written by the container's Python (3.12) into a directory the host's
+      # Python (3.14) also imports from.
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      # Source is bind-mounted so --reload sees host edits. Only the three
+      # directories that contain code the server runs, plus scripts/ for the
+      # sample generator -- mounting the repo root would drag venv/,
+      # node_modules/ and .git into the container.
+      - ./backend:/app/backend
+      - ./core:/app/core
+      - ./scripts:/app/scripts
+      # samples/ is gitignored and generated, so it is mounted read-write and
+      # the container regenerates it on start if it is empty. The generator is
+      # seeded, so the files are byte-identical to the host's.
+      - ./samples:/app/samples
+    command: >
+      sh -c "python scripts/make_samples.py &&
+             uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload"
+    healthcheck:
+      # Uses the app's own endpoint rather than a TCP probe, so "healthy" means
+      # the application answered, not merely that the port is open.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
+      interval: 10s
+      timeout: 4s
+      retries: 5
+      start_period: 15s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: adw-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      # The browser -- not the container -- makes this request, so the address
+      # is the HOST-published port, not the compose service name. Using
+      # http://backend:8000 here is the classic mistake and produces a
+      # connection error that looks like the API is down.
+      VITE_API_BASE: http://localhost:8000/api
+      # Bind mounts on Windows and macOS do not deliver inotify events into the
+      # container, so Vite's file watcher never fires and hot reload silently
+      # stops working. Polling is the documented fix; it costs a little CPU.
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      # Source in.
+      - ./frontend:/app
+      # An ANONYMOUS volume masking /app/node_modules. Without this line, the
+      # bind mount above replaces the container's node_modules with the host's
+      # -- which on Windows contains Windows binaries and, for a native module,
+      # simply will not run under Alpine. The anonymous volume keeps the
+      # container's own install visible at that path.
+      - /app/node_modules
+    # --host 0.0.0.0 or Vite binds to the container's loopback only and the
+    # published port answers nothing.
+    command: npm run dev -- --host 0.0.0.0 --port 5173
+    depends_on:
+      backend:
+        # Waits for the healthcheck, not merely for the container to start, so
+        # the frontend's first /api/health call does not race the backend's boot
+        # and paint an "API offline" banner on a working system.
+        condition: service_healthy

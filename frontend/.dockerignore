@@ -1,0 +1,15 @@
+# node_modules is the important line. The host's tree is installed for Windows;
+# copying it into an Alpine image would put the wrong platform's binaries where
+# `npm ci` is meant to have placed the right ones -- and it is by far the
+# largest thing in the directory, so the build context stays small too.
+node_modules/
+dist/
+
+.git/
+.env
+.env.local
+
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
