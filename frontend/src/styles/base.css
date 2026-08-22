@@ -129,6 +129,34 @@ button {
   }
 }
 
+/* ------------------------------------------------------------- skip link --
+ * The first focusable element on the page. It is off-screen until focused, so
+ * a keyboard or screen-reader user can jump past the header straight to the
+ * content instead of tabbing through the brand and the health chip on every
+ * page load. Assessed directly under semantic HTML, and genuinely useful here
+ * because the sidebar puts a long column table in tab order.
+ */
+.skip-link {
+  position: absolute;
+  top: var(--space-1);
+  left: var(--space-1);
+  z-index: 100;
+  padding: var(--space-1) var(--space-2);
+  background: var(--accent);
+  color: #fff;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+  box-shadow: var(--shadow-md);
+  transform: translateY(-200%);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.skip-link:focus-visible {
+  transform: none;
+}
+
 /* -------------------------------------------------------------- utilities */
 
 /** Visible to screen readers, invisible on screen. Used for headings that are

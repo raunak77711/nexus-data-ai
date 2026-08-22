@@ -35,17 +35,38 @@ export default function WorldView({
   loading,
   error,
   timeBounds,
+  anchorRef,
+  arrived,
 }) {
+  const figureCount = Object.keys(world?.figures_json ?? {}).length
+
   return (
-    <section className="world" aria-labelledby="world-heading" aria-busy={loading}>
+    <section
+      className="world"
+      aria-labelledby="world-heading"
+      aria-busy={loading}
+      /* The arrival flourish is a data attribute so the whole thing is one CSS
+         rule, and so it costs nothing once it has been removed. */
+      data-arrived={arrived ? 'yes' : 'no'}
+    >
       <div className="section-title">
-        <h2 id="world-heading">The world</h2>
+        {/* tabIndex -1 makes this focusable programmatically but keeps it out of
+            tab order; App moves focus here when the first world lands. */}
+        <h2 id="world-heading" ref={anchorRef} tabIndex={-1}>The world</h2>
         {world?.stats?.n_rows_used != null && (
           <span className="section-note tnum">
             built from {world.stats.n_rows_used.toLocaleString()} usable rows
           </span>
         )}
       </div>
+
+      {/* Announced to assistive tech as well as shown: the flourish is visual,
+          this is the same information as text. */}
+      <p className="world-arrival" role="status" aria-live="polite">
+        {arrived && figureCount > 0
+          ? `${archetype} world built — ${figureCount} ${figureCount === 1 ? 'figure' : 'figures'}, each with its source.`
+          : ''}
+      </p>
 
       <Controls
         archetype={archetype}

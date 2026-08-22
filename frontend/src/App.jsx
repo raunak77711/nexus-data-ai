@@ -42,6 +42,16 @@ export default function App() {
   const [world, setWorld] = useState(null)
   const [worldLoading, setWorldLoading] = useState(false)
   const [worldError, setWorldError] = useState('')
+  /**
+   * True only for the first successful world of a session.
+   *
+   * The world-building moment is the emotional core of the demo, so it fires
+   * once and then gets out of the way: replaying the flourish every time the
+   * user nudges a slider would turn the one moment that should feel like an
+   * event into an animation they are waiting through.
+   */
+  const [worldArrived, setWorldArrived] = useState(false)
+  const arrivedFor = useRef(null)
 
   // --------------------------------------------------------------- forecast
   const [forecast, setForecast] = useState(null)
@@ -63,6 +73,9 @@ export default function App() {
    * ticket is allowed to write state.
    */
   const worldTicket = useRef(0)
+
+  /** The world's heading, so focus can be moved there once a world exists. */
+  const worldAnchor = useRef(null)
 
   /**
    * A 404 on any call means the server has forgotten this upload. Say so.
@@ -121,6 +134,8 @@ export default function App() {
     setForecastError('')
     setWorldError('')
     setParams(DEFAULT_PARAMS)
+    setWorldArrived(false)
+    arrivedFor.current = null
 
     try {
       const decision = await api.getRoute(payload.session_id)
@@ -193,6 +208,20 @@ export default function App() {
       .then((payload) => {
         if (cancelled || ticket !== worldTicket.current) return
         setWorld(payload)
+
+        // Fire the arrival flourish once per session, and only for a world that
+        // actually built -- announcing "your world is ready" over an
+        // insufficient_data message would be worse than saying nothing.
+        if (payload.status === 'ok' && arrivedFor.current !== session.session_id) {
+          arrivedFor.current = session.session_id
+          setWorldArrived(true)
+          window.setTimeout(() => setWorldArrived(false), 2200)
+          // Move focus to the world so a keyboard user is taken to the result
+          // rather than left at the top of a page that has changed underneath
+          // them. Focus, not just scroll -- scrolling alone moves the viewport
+          // and leaves the tab position behind it.
+          window.requestAnimationFrame(() => worldAnchor.current?.focus())
+        }
       })
       .catch((error) => {
         if (cancelled || ticket !== worldTicket.current) return
@@ -255,6 +284,8 @@ export default function App() {
   /* --------------------------------------------------------------- rendering */
   return (
     <>
+      <a className="skip-link" href="#main">Skip to content</a>
+
       <header className="app-header">
         <div className="app-header-inner">
           <a className="brand" href="/">
@@ -298,7 +329,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="app-main">
+      <main className="app-main" id="main">
         {backend.state === 'down' && (
           <p className="status-note app-offline" data-tone="error">
             <strong>The API is not responding.</strong> {backend.message} Start it
@@ -344,6 +375,8 @@ export default function App() {
                   /* Keyed on the session so a new dataset gets fresh controls
                      rather than inheriting the previous file's slider values. */
                   key={session.session_id}
+                  anchorRef={worldAnchor}
+                  arrived={worldArrived}
                   archetype={archetype}
                   world={world}
                   params={params}

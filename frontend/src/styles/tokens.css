@@ -13,6 +13,11 @@
  */
 
 :root {
+  /* Tells the browser both schemes are supported, so form controls, scrollbars
+   * and the canvas behind the page follow the theme. Without it a dark page
+   * gets light native widgets and a white flash before the first paint. */
+  color-scheme: light dark;
+
   /* ---------------------------------------------------------------- type --
    * Three faces, each with a job: Space Grotesk for headings (geometric, with
    * enough quirk in its terminals to stop the page reading as a template),
@@ -32,7 +37,12 @@
    * not equal -- a 15px here and a 16px there -- which reads as sloppiness
    * without the reader being able to say why. A ratio makes every step a
    * visible decision. */
-  --text-2xs: 0.64rem;   /* 10.2px -- badges, column meta */
+  /* A documented deviation from the pure ratio: the -2 step is 0.64rem
+   * (10.2px), which tested too small for uppercase labels with wide tracking --
+   * the letterforms started to fill in. 0.7rem is the smallest size at which
+   * they stay crisp. This size is used ONLY for tracked uppercase micro-labels
+   * and never for a sentence, which is why the break is safe. */
+  --text-2xs: 0.7rem;    /* 11.2px -- badges, column meta */
   --text-xs: 0.8rem;     /* 12.8px -- captions, table body */
   --text-sm: 0.9rem;     /* 14.4px -- secondary body, controls */
   --text-base: 1rem;     /* 16px   -- body */
@@ -61,7 +71,6 @@
    * An 8px scale with two half-steps at the bottom, because 4px is genuinely
    * needed for the gap between a badge and its label and rounding that up to 8
    * makes chips look unglued. Everything above --space-2 is a multiple of 8. */
-  --space-0: 0;
   --space-05: 0.25rem;  /*  4px */
   --space-1: 0.5rem;    /*  8px */
   --space-2: 1rem;      /* 16px */
@@ -69,9 +78,6 @@
   --space-4: 2rem;      /* 32px */
   --space-5: 2.5rem;    /* 40px */
   --space-6: 3rem;      /* 48px */
-  --space-8: 4rem;      /* 64px */
-  --space-10: 5rem;     /* 80px */
-  --space-12: 6rem;     /* 96px */
 
   /* --------------------------------------------------------------- radii --
    * A small family. Radii that vary per component are the fastest way to make
@@ -79,7 +85,6 @@
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
-  --radius-xl: 22px;
   --radius-pill: 999px;
 
   /* -------------------------------------------------------------- colour --
@@ -89,17 +94,13 @@
    * The neutral ramp is warm (a few degrees of yellow in the greys) rather than
    * pure. Pure grey next to a saturated accent reads as cold and slightly
    * clinical; the warmth is what stops "credible" turning into "enterprise". */
+  /* Only the steps the roles below actually draw from are defined. A full
+   * 50-950 ramp looks thorough and is dead code: an unused token is a decision
+   * nobody made, and it invites the next person to reach past the roles and
+   * hard-code a ramp value, which is exactly what the roles exist to prevent. */
   --ink-950: #14151a;
-  --ink-900: #1e2028;
-  --ink-800: #2c2f3a;
-  --ink-700: #414553;
   --ink-600: #5c6172;
-  --ink-500: #7c8296;
-  --ink-400: #a3a8b8;
-  --ink-300: #c8ccd6;
-  --ink-200: #e2e4ea;
-  --ink-100: #eef0f4;
-  --ink-50: #f7f7f9;
+  --ink-500: #666b7c;
 
   /* Accent: a saturated violet-blue. Chosen because it is unmistakably not a
    * default framework blue, it holds up as both a fill and a 1px border, and it
@@ -110,14 +111,12 @@
   --accent-500: #6350f5;
   --accent-400: #8878ff;
   --accent-200: #cfc8ff;
-  --accent-100: #ebe8ff;
   --accent-50: #f5f3ff;
 
   /* Spark: a warm coral used only for the world-building moment and for the
    * one or two places that should catch the eye. Deliberately rationed -- a
    * second accent used freely is just a second accent. */
   --spark-500: #ff6b3d;
-  --spark-100: #ffe8e0;
 
   /* Semantic. Green/amber/red, tuned to the same warmth and saturation as the
    * accent so they read as one family rather than as traffic lights.
@@ -140,12 +139,20 @@
   --type-datetime-bg: #f1e9fd;
   --type-numeric: #1668b3;
   --type-numeric-bg: #e3f0fb;
-  --type-categorical: #0f7f6c;
+  --type-categorical: #0e7866;
   --type-categorical-bg: #ddf3ef;
-  --type-geo: #b0561d;
+  --type-geo: #a8521b;
   --type-geo-bg: #fceadd;
   --type-text: #5c6172;
   --type-text-bg: #eef0f4;
+
+  /* Every foreground/background pair above was measured against its own
+   * surface and lands at or above WCAG AA 4.5:1 for normal text -- including
+   * --ink-500, which drives --fg-subtle and therefore the smallest type in the
+   * app. Three values (the subtle grey, and the categorical and geo badges)
+   * were darkened from their first draft specifically to clear it; the
+   * originals measured 3.4-4.3:1, which is the range that looks fine to a
+   * designer with good eyesight on a good monitor and fails for everyone else. */
 
   /* Roles. Components reference these, never the ramps above, so the dark
    * theme only has to redefine the roles. */
@@ -158,7 +165,6 @@
   --fg: var(--ink-950);
   --fg-muted: var(--ink-600);
   --fg-subtle: var(--ink-500);
-  --fg-inverse: #ffffff;
   --accent: var(--accent-500);
   --accent-hover: var(--accent-600);
   --accent-soft: var(--accent-50);
@@ -170,7 +176,6 @@
    * surface warm as it darkens. */
   --shadow-sm: 0 1px 2px rgba(20, 21, 26, 0.06), 0 1px 3px rgba(20, 21, 26, 0.04);
   --shadow-md: 0 2px 4px rgba(20, 21, 26, 0.05), 0 8px 24px rgba(20, 21, 26, 0.08);
-  --shadow-lg: 0 4px 8px rgba(20, 21, 26, 0.06), 0 20px 48px rgba(20, 21, 26, 0.12);
 
   /* --------------------------------------------------------------- motion --
    * Nothing over 250ms. Above roughly that, an interface stops feeling
@@ -213,7 +218,6 @@
     --fg: #f2f2f4;
     --fg-muted: #a8adba;
     --fg-subtle: #838a99;
-    --fg-inverse: #14151a;
     --accent: var(--accent-400);
     --accent-hover: #9a8cff;
     --accent-soft: rgba(99, 80, 245, 0.14);
@@ -242,6 +246,5 @@
 
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
     --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.45);
-    --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.35), 0 20px 48px rgba(0, 0, 0, 0.55);
   }
 }

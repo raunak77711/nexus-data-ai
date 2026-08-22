@@ -3,8 +3,75 @@
  */
 
 .world {
+  position: relative;
   display: grid;
   gap: var(--space-2);
+}
+
+/* -------------------------------------------------------- arrival moment --
+ * Fired once per session, when the first world actually builds.
+ *
+ * The build is the emotional core of the demo, so it gets one deliberate
+ * gesture: a line of light sweeps across the top of the section while the
+ * figures rise in beneath it. It is ~700ms of animation on an element that is
+ * `pointer-events: none` and gone afterwards -- it cannot get in the way of a
+ * click, and it never replays, because a flourish on every slider nudge stops
+ * being a moment and becomes a delay.
+ */
+.world::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, transparent, var(--accent), var(--spark-500), transparent);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.world[data-arrived='yes']::before {
+  animation: world-sweep 700ms var(--ease-out) both;
+}
+
+@keyframes world-sweep {
+  0% { opacity: 0; transform: scaleX(0.15); }
+  35% { opacity: 1; }
+  100% { opacity: 0; transform: scaleX(1); }
+}
+
+/* The heading is the focus target, so it needs a ring worth landing on -- but
+ * only for keyboard focus, never for the programmatic focus() call that lands
+ * a mouse user here. :focus-visible gives exactly that distinction. */
+.world h2:focus {
+  outline: none;
+}
+
+.world h2:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 4px;
+}
+
+.world-arrival {
+  font-size: var(--text-sm);
+  color: var(--accent);
+  font-weight: var(--weight-medium);
+}
+
+.world-arrival:empty {
+  display: none;
+}
+
+.world[data-arrived='yes'] .world-arrival {
+  animation: rise-in var(--dur-slow) var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The sweep is a moving gradient across the full page width -- exactly the
+   * kind of large travelling motion the preference exists to suppress. The
+   * announcement text remains, so the moment is still communicated. */
+  .world[data-arrived='yes']::before { animation: none; }
 }
 
 /* --------------------------------------------------------------- controls */
