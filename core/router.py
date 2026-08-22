@@ -13,11 +13,10 @@ never as a consumer of the raw data. That choice is deliberate:
   adds semantic judgement ("revenue" is a better target than "order_id"), so
   when it is unavailable the app must still work, just less cleverly.
 
-Provider: Google Gemini via the google-generativeai SDK. Note that this package
-is end-of-life upstream (it prints a FutureWarning on import and directs users
-to google-genai); it is used here because it is the stack specified for the
-module. Provider details are confined to _call_gemini() so swapping SDKs is a
-one-function change.
+Provider: Google Gemini via the google-genai SDK -- Google's supported client,
+which replaces the end-of-life google-generativeai package. Provider details are
+confined to _call_gemini() and the import block, so swapping SDKs again is a
+two-place change.
 """
 
 from __future__ import annotations
@@ -34,7 +33,12 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-MODEL = "gemini-2.0-flash"
+# gemini-2.0-flash was retired server-side and now 404s with an explicit
+# "no longer available" message, so the model id is a live dependency, not a
+# free choice. Flash rather than Pro because this is a three-way classification
+# over a few hundred tokens -- the cheapest, fastest tier is the right one, and
+# Pro's extra reasoning buys nothing here.
+MODEL = "gemini-3.6-flash"
 MAX_TOKENS = 1000
 
 TIMESERIES = "timeseries"
@@ -46,24 +50,20 @@ ARCHETYPES = (TIMESERIES, GEO, TABULAR)
 # except clause. A missing SDK is a legitimate deployment state -- the app still
 # runs rule-based -- so the failure is recorded rather than raised.
 try:
-    import google.generativeai as genai
-    from google.api_core import exceptions as google_exceptions
-    from google.generativeai.types import (
-        BlockedPromptException,
-        StopCandidateException,
-    )
+    from google import genai
+    from google.genai import errors as genai_errors
+    from google.genai import types as genai_types
+    import httpx
 
     SDK_IMPORT_ERROR: Optional[str] = None
-    # GoogleAPIError is the root of the transport/service hierarchy (auth,
-    # quota, timeout, 5xx); the two type exceptions cover a response that was
-    # cut short by a safety filter. Naming them catches every *provider*
-    # failure while letting genuine programming errors in this module
-    # propagate and be fixed.
-    API_ERRORS: tuple = (
-        google_exceptions.GoogleAPIError,
-        BlockedPromptException,
-        StopCandidateException,
-    )
+    # errors.APIError is the root of google-genai's service hierarchy (auth,
+    # quota, safety block, 5xx) -- ClientError and ServerError both derive from
+    # it. httpx.HTTPError is included because google-genai raises the raw
+    # transport exception for DNS/connect/read timeouts rather than wrapping
+    # it; without it a flaky network would crash the app instead of degrading.
+    # Naming these catches every *provider* failure while letting genuine
+    # programming errors in this module propagate and be fixed.
+    API_ERRORS: tuple = (genai_errors.APIError, httpx.HTTPError)
 except ImportError as _exc:  # pragma: no cover - depends on install state
     genai = None
     SDK_IMPORT_ERROR = str(_exc)
@@ -264,25 +264,40 @@ def _call_gemini(summary: str, api_key: str) -> str:
 
     Isolated from route() so every provider-specific detail -- SDK surface,
     model name, generation config -- lives in one place. Swapping to a
-    different provider (or to google-genai when this EOL package is retired)
-    means rewriting this function and nothing else.
+    different provider means rewriting this function and nothing else.
+
+    WHY a client is constructed per call rather than cached at module scope:
+    the api_key is a per-call argument (route() accepts an override so a future
+    multi-tenant server can hold one key per request). A module-level client
+    would silently pin the first key it ever saw. Construction is local object
+    setup, not a network round-trip, so the cost is negligible next to the call.
 
     response_mime_type='application/json' asks Gemini to constrain its decoding
     to valid JSON. That is a stronger guarantee than a prompt instruction, but
     the caller still strips fences and still validates, because a server-side
     guarantee is not something to stake the whole pipeline on.
     """
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(
-        model_name=MODEL,
-        system_instruction=SYSTEM_PROMPT,
-        generation_config=genai.GenerationConfig(
+    client = genai.Client(api_key=api_key)
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=summary,
+        config=genai_types.GenerateContentConfig(
+            system_instruction=SYSTEM_PROMPT,
             max_output_tokens=MAX_TOKENS,
             temperature=0.0,  # classification, not creative writing: be repeatable
             response_mime_type="application/json",
+            # No tools are supplied, so the SDK's automatic function-calling
+            # loop can only add a warning and a wasted branch. Disabling it
+            # states the intent: one request, one answer, no agentic loop.
+            automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(
+                disable=True
+            ),
         ),
     )
-    return model.generate_content(summary).text
+    # .text is None (not "") when a candidate was blocked or returned no parts;
+    # returning "" lets the caller's json.loads fail into the normal fallback
+    # path instead of raising TypeError from a None.
+    return response.text or ""
 
 
 def route(profile: Dict[str, Any], api_key: Optional[str] = None) -> Dict[str, Any]:
@@ -305,7 +320,7 @@ def route(profile: Dict[str, Any], api_key: Optional[str] = None) -> Dict[str, A
     key = api_key or os.getenv("GOOGLE_API_KEY")
 
     if genai is None:
-        logger.info("google-generativeai not importable; using rule-based routing")
+        logger.info("google-genai not importable; using rule-based routing")
         return rule_based_route(profile, why=f"SDK unavailable ({SDK_IMPORT_ERROR})")
     if not key:
         logger.info("No GOOGLE_API_KEY found; using rule-based routing")

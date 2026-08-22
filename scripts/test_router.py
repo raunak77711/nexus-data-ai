@@ -99,15 +99,20 @@ def part2_stubbed() -> int:
             else:
                 check(label, result["source"] == "fallback", "degraded, did not raise")
 
-        # An API exception must degrade, not propagate.
+        # An API exception must degrade, not propagate. Raised as the real SDK
+        # class rather than a generic Exception, so this test would fail if the
+        # router's API_ERRORS tuple ever stopped covering the provider's
+        # hierarchy -- which is exactly what an SDK swap is likely to break.
         def boom(_summary: str, _key: str) -> str:
-            from google.api_core import exceptions as ge
+            from google.genai import errors as genai_errors
 
-            raise ge.ResourceExhausted("quota exceeded")
+            raise genai_errors.ClientError(
+                429, {"error": {"message": "quota exceeded", "status": "RESOURCE_EXHAUSTED"}}
+            )
 
         router._call_gemini = boom
         result = router.route(profile, api_key="stub-key")
-        print("\nAPI raises ResourceExhausted:")
+        print("\nAPI raises ClientError 429:")
         print(f"  -> archetype={result['archetype']} source={result['source']}")
         check("API error degrades to rules", result["source"] == "fallback")
     finally:
