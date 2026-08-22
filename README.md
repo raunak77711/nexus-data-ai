@@ -417,6 +417,12 @@ python scripts/test_chat.py       # the chat assistant cannot fabricate
 python scripts/test_app.py        # the Streamlit harness, end to end
 ```
 
+Against a **running** server (after `docker compose up`, or a local uvicorn):
+
+```bash
+python scripts/verify_live.py     # the whole journey over a real socket
+```
+
 Frontend:
 
 ```bash
@@ -468,6 +474,10 @@ What they actually cover:
 - **`test_app.py`** — drives the Streamlit harness with `AppTest`, pulling every
   code block back off the rendered page to execute it. It caught a real bug on
   its first run (`st.line_chart` takes no `key` argument in Streamlit 1.62).
+- **`verify_live.py`** — not a unit suite: it walks upload → profile → route →
+  world → code → forecast → chat against a real server over a real socket, in
+  the same order the browser does. A green `test_api.py` says the logic works; a
+  green `verify_live.py` says the deployment does.
 
 ## Limitations and future work
 
