@@ -24,7 +24,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from backend import __version__
-from backend.routers import forecast, health, route, samples, upload, world
+from backend.routers import chat, forecast, health, route, samples, upload, world
 
 logging.basicConfig(
     level=logging.INFO,
@@ -66,8 +66,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # chat is added in step 4; see backend/routers/chat.py
-    for module in (health, upload, samples, route, world, forecast):
+    for module in (health, upload, samples, route, world, forecast, chat):
         app.include_router(module.router, prefix=API_PREFIX)
 
     @app.exception_handler(StarletteHTTPException)

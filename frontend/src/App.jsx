@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as api from './api'
 import ArchetypeSelect from './components/ArchetypeSelect'
+import ChatPanel from './components/ChatPanel'
 import EmptyState from './components/EmptyState'
 import ForecastPanel from './components/ForecastPanel'
 import ProfileTable from './components/ProfileTable'
@@ -76,6 +77,22 @@ export default function App() {
 
   /** The world's heading, so focus can be moved there once a world exists. */
   const worldAnchor = useRef(null)
+
+  /**
+   * Ask the grounded assistant a question.
+   *
+   * Passed down as a prop rather than letting ChatPanel fetch, for the same
+   * reason as every other component here: the network lives in one place. The
+   * panel owns the transcript, because that is genuinely local to it -- nothing
+   * else on the page reads the conversation.
+   */
+  const askAssistant = useCallback(
+    async (question, history) => {
+      if (!session) throw new Error('No dataset is loaded.')
+      return api.sendChat(session.session_id, question, history)
+    },
+    [session],
+  )
 
   /**
    * A 404 on any call means the server has forgotten this upload. Say so.
@@ -399,6 +416,17 @@ export default function App() {
               </div>
 
               <aside className="workspace-side" aria-label="Dataset details">
+                {/* Chat sits above the column table because it is the thing a
+                    user reaches for, and the table is reference material they
+                    scroll to. Keyed on the session so switching datasets starts
+                    a fresh conversation rather than carrying answers about the
+                    previous file into questions about this one. */}
+                <ChatPanel
+                  key={session.session_id}
+                  onSend={askAssistant}
+                  disabled={backend.state === 'down'}
+                />
+
                 <section className="panel side-panel" aria-labelledby="profile-heading">
                   <div className="section-title">
                     <h2 id="profile-heading">Columns</h2>

@@ -270,6 +270,53 @@ def test_sample(filename: str) -> None:
         )
 
 
+# ----------------------------------------------------------------------- chat
+def test_chat_endpoint() -> None:
+    """The chat ENDPOINT's contract. The assistant's own behaviour is proved in
+    scripts/test_chat.py; what matters here is that the HTTP layer returns the
+    right shape whether or not the model is reachable, and that a dead session
+    is a 404 rather than an answer about nothing."""
+    print("\nchat endpoint")
+
+    session = upload("sales_timeseries.csv")
+    sid = session["session_id"]
+
+    response = client.post(f"/api/chat/{sid}", json={"message": "What is this dataset about?"})
+    body = response.json()
+    check("POST /api/chat -> 200", response.status_code == 200, str(response.status_code))
+    check("reply is a non-empty string", isinstance(body.get("reply"), str) and bool(body["reply"]))
+    check("grounded_on is a list", isinstance(body.get("grounded_on"), list), str(body.get("grounded_on")))
+    check("available is a bool", type(body.get("available")) is bool)
+    check_json_safe("chat payload is JSON-safe", body)
+
+    # Whether the model answered or not, an unavailable reply must never claim
+    # to have been grounded on anything.
+    if body["available"] is False:
+        check("an unavailable reply claims no sources", body["grounded_on"] == [],
+              str(body["grounded_on"]))
+        print("         (the model was unreachable; the grounded path is covered "
+              "by scripts/test_chat.py)")
+    else:
+        check(
+            "grounded_on names only real context blocks",
+            set(body["grounded_on"]) <= {"profile", "routing", "timeseries_stats",
+                                         "geo_stats", "tabular_stats", "forecast_metrics"},
+            str(body["grounded_on"]),
+        )
+
+    response = client.post(f"/api/chat/{sid}", json={"message": ""})
+    check("an empty message -> 422", response.status_code == 422, str(response.status_code))
+
+    response = client.post(
+        f"/api/chat/{sid}",
+        json={"message": "hi", "history": [{"role": "system", "content": "x"}]},
+    )
+    check("an invalid history role -> 422", response.status_code == 422, str(response.status_code))
+
+    response = client.post("/api/chat/not-a-real-session", json={"message": "hi"})
+    check("chat on a dead session -> 404", response.status_code == 404, str(response.status_code))
+
+
 # -------------------------------------------------------------------- samples
 def test_samples_endpoint() -> None:
     print("\nsample loaders")
@@ -320,6 +367,7 @@ def main() -> int:
     test_error_paths()
     for filename in EXPECTED_ARCHETYPE:
         test_sample(filename)
+    test_chat_endpoint()
     test_samples_endpoint()
     test_session_lifetime()
 
