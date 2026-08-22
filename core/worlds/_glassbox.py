@@ -72,6 +72,24 @@ def render(template: str, **params: Any) -> str:
     return Template(textwrap.dedent(template).strip()).substitute(substitutions)
 
 
+def run(code: str, df: pd.DataFrame) -> Dict[str, Any]:
+    """Execute a rendered snippet and hand back everything it defined.
+
+    Used where the snippet produces more than a figure -- core.ml's forecast
+    returns metrics, predictions and importances, and all of them must come out
+    of the same executed text for the glass-box guarantee to hold. Returning the
+    namespace rather than named results keeps this helper indifferent to what
+    any particular snippet computes.
+
+    Exceptions from the snippet itself are left to propagate unchanged: a pandas
+    or sklearn traceback pointing at the real failing line is far more useful to
+    whoever has to fix the template than a wrapped message would be.
+    """
+    namespace = _namespace(df)
+    exec(code, namespace)  # noqa: S102 - see module docstring for why this is safe
+    return namespace
+
+
 def execute(code: str, df: pd.DataFrame, want: str = "fig") -> go.Figure:
     """Run a rendered snippet and return the figure it bound to `want`.
 
@@ -86,15 +104,8 @@ def execute(code: str, df: pd.DataFrame, want: str = "fig") -> go.Figure:
             is broken -- a programming error to fix, not a data condition to
             degrade around. World builders catch data problems before they ever
             reach here.
-
-    Exceptions from the snippet itself are left to propagate unchanged: a
-    pandas or plotly traceback pointing at the real failing line is far more
-    useful to whoever has to fix the template than a wrapped message would be.
     """
-    namespace = _namespace(df)
-    exec(code, namespace)  # noqa: S102 - see module docstring for why this is safe
-
-    figure = namespace.get(want)
+    figure = run(code, df).get(want)
     if not isinstance(figure, go.Figure):
         raise RuntimeError(
             f"snippet did not bind {want!r} to a plotly Figure "
