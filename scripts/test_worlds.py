@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core import router  # noqa: E402
 from core.profiler import profile_dataframe  # noqa: E402
-from core.worlds import geo, timeseries  # noqa: E402
+from core.worlds import geo, tabular, timeseries  # noqa: E402
 
 SAMPLES = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "samples")
 
@@ -207,9 +207,60 @@ def test_geo() -> None:
           result["message"])
 
 
+def test_tabular() -> None:
+    print("=" * 72)
+    print("TABULAR")
+    print("-" * 72)
+
+    df, routing = load("employees_tabular.csv")
+    out = tabular.build(df, routing)
+
+    check("builds", out["status"] == "ok")
+    check("has distribution", "distribution" in out["figures"])
+    check("has entity bars", "by_entity" in out["figures"])
+    check("has correlation heatmap", "correlation" in out["figures"])
+    print(f"    stats: {json.dumps(out['stats'])[:400]}")
+    check_code_is_real("tabular", df, out)
+
+    print("-" * 72)
+    print("  degradation:")
+
+    no_entity = tabular.build(df, {**routing, "entity_col": None})
+    check("entity_col=None still builds",
+          no_entity["status"] == "ok" and "by_entity" not in no_entity["figures"],
+          "distribution + correlation only")
+    check_code_is_real("tabular[no entity]", df, no_entity)
+
+    # The small-file case fix (b) exists to prevent: a 100-row file whose
+    # category column would previously have been typed as text, leaving the
+    # entity chart missing.
+    small = pd.DataFrame({
+        "region": ["North", "South", "East", "West", "Mid", "NW"] * 17,
+        "sales": list(np.linspace(10, 200, 102)),
+    }).head(100)
+    small_routing = router.rule_based_route(profile_dataframe(small), why="small file")
+    check("small file routes an entity column",
+          small_routing["entity_col"] == "region",
+          f"entity_col={small_routing['entity_col']}")
+    small_out = tabular.build(small, small_routing)
+    check("small file gets its entity chart", "by_entity" in small_out["figures"])
+    check_code_is_real("tabular[small]", small, small_out)
+
+    one_numeric = pd.DataFrame({"grp": ["a", "b"] * 30, "value": list(np.arange(60.0))})
+    result = tabular.build(one_numeric, {"entity_col": "grp", "target_col": "value"})
+    check("single numeric column omits the heatmap",
+          "correlation" not in result["figures"],
+          "1x1 grid would be meaningless, so the figure is left out entirely")
+
+    result = tabular.build(df, {**routing, "target_col": None})
+    check("missing target degrades", result["status"] == "insufficient_data",
+          result["message"])
+
+
 if __name__ == "__main__":
     test_timeseries()
     test_geo()
+    test_tabular()
     print("=" * 72)
     print("ALL PASS" if FAILURES == 0 else f"{FAILURES} FAILURE(S)")
     raise SystemExit(1 if FAILURES else 0)
