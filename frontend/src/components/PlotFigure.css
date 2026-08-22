@@ -1,0 +1,55 @@
+/**
+ * Figure frame.
+ *
+ * A fixed height rather than an aspect ratio: plotly needs a concrete pixel
+ * height to lay out against, and an aspect-ratio box gives it one that changes
+ * on every container resize, which produces a visible re-layout flicker.
+ */
+.plot-figure {
+  width: 100%;
+  height: 420px;
+  min-width: 0;
+}
+
+.plot-figure .js-plotly-plot,
+.plot-figure .plot-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Plotly's toolbar is opaque and always-on by default, which puts a grey strip
+ * over the top-right corner of every chart. Fading it in on hover keeps the
+ * chart clean while leaving the controls exactly where a plotly user expects. */
+.plot-figure .modebar {
+  opacity: 0;
+  transition: opacity var(--dur-normal) var(--ease-out);
+}
+
+.plot-figure:hover .modebar,
+.plot-figure:focus-within .modebar {
+  opacity: 1;
+}
+
+.plot-figure .modebar-btn path {
+  fill: var(--fg-subtle);
+}
+
+.plot-figure .modebar-btn:hover path {
+  fill: var(--accent);
+}
+
+/* Plotly draws its own hover tooltip background; the token has to be resolved
+ * to a real colour for the SVG, so it is restated here rather than relying on
+ * the var() in the layout object. */
+.plot-figure .hoverlayer .hovertext rect {
+  fill: var(--bg-elevated) !important;
+  stroke: var(--border-strong) !important;
+}
+
+.plot-figure .hoverlayer .hovertext text {
+  fill: var(--fg) !important;
+}
+
+@media (max-width: 900px) {
+  .plot-figure { height: 340px; }
+}

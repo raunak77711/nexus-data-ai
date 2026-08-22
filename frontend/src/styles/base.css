@@ -1,0 +1,338 @@
+/**
+ * Reset, element defaults, and the handful of utilities used across components.
+ *
+ * The reset is deliberately small. A heavyweight reset strips defaults that are
+ * then re-added one by one, which for a hand-written stylesheet is more code
+ * and more places to be inconsistent. What is reset here is only what browsers
+ * genuinely disagree about, or what actively fights a layout.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* Anchor navigation and any scroll-into-view lands below the sticky header
+   * rather than underneath it. */
+  scroll-padding-top: calc(var(--header-height) + var(--space-3));
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  font-feature-settings: 'cv05' 1, 'ss03' 1; /* Inter: single-storey l, curved r */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  text-wrap: balance; /* stops a heading orphaning its last word */
+}
+
+h1 { font-size: var(--text-2xl); }
+h2 { font-size: var(--text-xl); }
+h3 { font-size: var(--text-lg); }
+h4 { font-size: var(--text-base); }
+
+p {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+ul, ol {
+  margin: 0;
+  padding: 0;
+}
+
+a {
+  color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+code, pre, kbd, samp {
+  font-family: var(--font-mono);
+  font-size: 0.92em; /* mono faces run large at a shared px size */
+}
+
+img, svg {
+  max-width: 100%;
+  display: block;
+}
+
+/* Form controls do not inherit type by default in any browser. */
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+/* ---------------------------------------------------------------- focus --
+ * A single visible focus style for the whole app, on :focus-visible only, so
+ * mouse users never see a ring and keyboard users always do. Removing focus
+ * outlines without replacing them is the single most common accessibility
+ * failure in hand-written CSS, so this is stated once, globally, and nothing
+ * below is allowed to set `outline: none`.
+ */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+::selection {
+  background: var(--accent-200);
+  color: var(--ink-950);
+}
+
+/* --------------------------------------------------------------- scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+/* ----------------------------------------------------------------- motion --
+ * One global override rather than a media query inside every animation.
+ *
+ * Motion is not removed outright: `prefers-reduced-motion` is a request to
+ * avoid large or vestibular-triggering movement, not to make the interface
+ * jump between states with no feedback at all. Durations collapse to 1ms and
+ * transforms stop, so state changes remain perceptible without anything
+ * travelling across the screen.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* -------------------------------------------------------------- utilities */
+
+/** Visible to screen readers, invisible on screen. Used for headings that are
+ *  structurally required but visually redundant. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/** Numbers that sit in a column must line up: tabular figures stop digits
+ *  jittering as values change, which is otherwise very visible in a live
+ *  stats strip. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/** The standard card surface. */
+.panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ------------------------------------------------------------------ buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: 1.2;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-instant) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.btn:active:not(:disabled) {
+  /* 1px, not a scale: a button that shrinks reads as a toy, a button that
+   * depresses reads as a control. */
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.btn-secondary {
+  background: var(--bg-elevated);
+  border-color: var(--border-strong);
+  color: var(--fg);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--fg-muted);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--bg-sunken);
+  color: var(--fg);
+}
+
+/* ------------------------------------------------------------------- badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-05);
+  padding: 2px var(--space-1);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- sections */
+.section-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.section-title h2,
+.section-title h3 {
+  flex: 0 0 auto;
+}
+
+.section-note {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+
+/* ------------------------------------------------------------------ status */
+.status-note {
+  display: flex;
+  gap: var(--space-1);
+  align-items: flex-start;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  border: 1px solid transparent;
+}
+
+.status-note[data-tone='error'] {
+  background: var(--danger-100);
+  border-color: var(--danger-500);
+  color: var(--danger-700);
+}
+
+.status-note[data-tone='warning'] {
+  background: var(--warning-100);
+  border-color: var(--warning-500);
+  color: var(--warning-700);
+}
+
+.status-note[data-tone='info'] {
+  background: var(--accent-soft);
+  border-color: var(--accent-200);
+  color: var(--fg-muted);
+}
+
+/* ---------------------------------------------------------------- skeleton --
+ * A shimmering block used wherever a figure or table is loading.
+ *
+ * WHY a skeleton and not a spinner: a spinner says "something is happening";
+ * a skeleton says "something of this shape and size is about to be here", so
+ * the layout does not jump when it arrives and the wait feels shorter.
+ */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-sunken);
+  border-radius: var(--radius-md);
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--fg) 7%, transparent),
+    transparent
+  );
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  to { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The shimmer is the one animation that must actually stop rather than
+   * shorten: at 1ms it would strobe. */
+  .skeleton::after { display: none; }
+}
+
+/* --------------------------------------------------------------- entrances */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.rise-in {
+  animation: rise-in var(--dur-slow) var(--ease-out) both;
+}

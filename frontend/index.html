@@ -4,7 +4,30 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>data-world</title>
+    <meta
+      name="description"
+      content="Upload a CSV and get a profiled, AI-routed interactive world back — with the exact Python that produced every chart."
+    />
+    <!-- The theme colour follows the OS scheme so the mobile browser chrome
+         matches the page rather than framing a dark page in white. -->
+    <meta name="theme-color" content="#f8f7f5" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#121316" media="(prefers-color-scheme: dark)" />
+
+    <!--
+      Fonts. preconnect first because the stylesheet and the font files come
+      from two different origins, and without it the browser cannot open the
+      connection to fonts.gstatic.com until it has already parsed the CSS.
+      display=swap so text renders immediately in the fallback face rather than
+      leaving the page blank while the webfont downloads.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <title>AI Data Worlds</title>
   </head>
   <body>
     <div id="root"></div>

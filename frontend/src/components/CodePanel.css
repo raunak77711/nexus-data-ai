@@ -1,0 +1,281 @@
+/**
+ * The glass box panel.
+ *
+ * Design intent: this should look like a good editor pane that happens to be
+ * embedded in a document -- inviting to read, not a stack trace. So: its own
+ * dark surface in both themes, real syntax colours with adequate contrast, a
+ * quiet gutter, and a header that behaves like a toolbar.
+ */
+
+.code-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  overflow: hidden;
+  transition: border-color var(--dur-normal) var(--ease-out);
+}
+
+.code-panel[data-open='yes'] {
+  border-color: var(--border-strong);
+}
+
+/* ------------------------------------------------------------------ header */
+.code-panel-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-05) var(--space-1) var(--space-05) var(--space-05);
+  background: var(--bg-sunken);
+  transition: box-shadow var(--dur-fast) var(--ease-out);
+}
+
+/* Written by the scroll-spy handler once the code has scrolled under the
+ * header, so the header reads as pinned rather than as a static strip. */
+.code-panel-header.is-scrolled {
+  box-shadow: 0 1px 0 var(--border-strong), 0 4px 10px rgba(0, 0, 0, 0.06);
+}
+
+/* The scroll progress bar. Width comes from --scroll-progress, which the
+ * scroll handler writes directly onto the element -- no React re-render. */
+.code-panel-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: calc(var(--scroll-progress, 0) * 100%);
+  background: var(--accent);
+  opacity: 0.85;
+  transition: width 60ms linear;
+}
+
+.code-panel[data-open='no'] .code-panel-header::after {
+  width: 0;
+}
+
+.code-panel-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--fg);
+  text-align: left;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.code-panel-toggle:hover {
+  color: var(--accent);
+}
+
+.code-chevron {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-sm);
+  color: var(--fg-subtle);
+  transition: transform var(--dur-normal) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.code-panel[data-open='yes'] .code-chevron {
+  transform: rotate(90deg);
+  color: var(--accent);
+}
+
+.code-panel-label {
+  flex: 0 0 auto;
+}
+
+.code-panel-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-regular);
+  color: var(--fg-subtle);
+}
+
+.code-panel-meta {
+  flex: 0 0 auto;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+/* Shown only when open: the line count of a collapsed panel is the useful
+ * signal, the scroll position of a collapsed panel is not. */
+.code-panel[data-open='no'] .code-panel-header::after { display: none; }
+
+/* -------------------------------------------------------------- copy button */
+.code-copy {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  min-width: 84px;
+  padding: var(--space-05) var(--space-1);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+
+.code-copy:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.code-copy:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* All three labels occupy the same grid cell, so swapping between them cannot
+ * change the button's width and shift the toolbar. */
+.code-copy > span {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-05);
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.code-copy-done,
+.code-copy-failed {
+  opacity: 0;
+  transform: translateY(3px);
+  font-weight: var(--weight-semibold);
+}
+
+/* data-copied is written by the click handler and removed on a timeout. */
+.code-copy[data-copied='yes'] {
+  border-color: var(--success-500);
+  color: var(--success-700);
+  background: var(--success-100);
+}
+
+.code-copy[data-copied='yes'] .code-copy-idle { opacity: 0; transform: translateY(-3px); }
+.code-copy[data-copied='yes'] .code-copy-done { opacity: 1; transform: none; }
+
+.code-copy[data-copied='failed'] {
+  border-color: var(--warning-500);
+  color: var(--warning-700);
+  background: var(--warning-100);
+}
+
+.code-copy[data-copied='failed'] .code-copy-idle { opacity: 0; transform: translateY(-3px); }
+.code-copy[data-copied='failed'] .code-copy-failed { opacity: 1; transform: none; }
+
+/* ----------------------------------------------------------------- shutter --
+ * grid-template-rows 0fr -> 1fr animates to the content's intrinsic height with
+ * no JavaScript measurement and no max-height guess that clips a long snippet.
+ */
+.code-panel-shutter {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--dur-slow) var(--ease-out);
+}
+
+.code-panel[data-open='yes'] .code-panel-shutter {
+  grid-template-rows: 1fr;
+}
+
+.code-panel-shutter-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* -------------------------------------------------------------------- code */
+.code-pre {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-1);
+  max-height: 460px;
+  overflow: auto;
+  background: var(--bg-code);
+  color: #e6e6ef;
+  font-size: var(--text-xs);
+  line-height: 1.65;
+  tab-size: 4;
+}
+
+.code-gutter {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  padding-right: var(--space-1);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: right;
+  color: rgba(230, 230, 239, 0.32);
+  user-select: none; /* dragging over the code must not select line numbers */
+}
+
+.code-gutter-line {
+  display: block;
+  min-width: 2ch;
+}
+
+.code-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: pre;
+  font-size: inherit;
+}
+
+.code-line {
+  display: block;
+}
+
+/* ------------------------------------------------------------ token colours --
+ * A restrained palette: four hues plus the base. Comments are NOT dimmed to the
+ * point of being skippable -- in these snippets the comment lines carry the
+ * reasoning, which is the part worth reading. */
+.tok-comment { color: #8b96b8; font-style: italic; }
+.tok-string { color: #a5d6a7; }
+.tok-number { color: #f5b971; }
+.tok-keyword { color: #c493ff; font-weight: var(--weight-medium); }
+.tok-constant { color: #f5b971; }
+.tok-builtin { color: #7fd1e8; }
+.tok-call { color: #7fd1e8; }
+.tok-name { color: #e6e6ef; }
+.tok-operator { color: #ff9d7a; }
+.tok-punct { color: rgba(230, 230, 239, 0.6); }
+
+/* --------------------------------------------------------------- footnote */
+.code-panel-footnote {
+  padding: var(--space-1) var(--space-2);
+  background: var(--bg-sunken);
+  border-top: 1px solid var(--border);
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+
+.code-panel-footnote em {
+  color: var(--fg-muted);
+  font-style: normal;
+  font-weight: var(--weight-semibold);
+}
+
+@media (max-width: 640px) {
+  .code-panel-title,
+  .code-panel-meta {
+    display: none;
+  }
+}

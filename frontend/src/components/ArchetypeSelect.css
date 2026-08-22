@@ -1,0 +1,124 @@
+/**
+ * Segmented control, built over real radio inputs.
+ *
+ * The inputs are visually hidden but present in the accessibility tree and in
+ * tab order; the labels are the visible control. Focus is forwarded from the
+ * input to its label with :has(), so keyboard users see the ring on the thing
+ * they can actually see.
+ */
+
+.archetype {
+  display: grid;
+  gap: var(--space-05);
+}
+
+.archetype-set {
+  margin: 0;
+  padding: 0;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.archetype-set:disabled {
+  opacity: 0.55;
+}
+
+.archetype-legend {
+  float: left; /* legend does not participate in flex layout without this */
+  padding: 0 var(--space-1) 0 0;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+}
+
+.segmented-option {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-05);
+  padding: var(--space-05) var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--fg-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.segmented-option input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+}
+
+.segmented-option:hover {
+  color: var(--fg);
+}
+
+.segmented-option[data-selected='yes'] {
+  background: var(--bg-elevated);
+  color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+
+.segmented-option:has(input:focus-visible) {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* The star marks the router's own choice, so an overridden control still shows
+ * what the system would have done. */
+.segmented-routed {
+  font-size: 9px;
+  line-height: 1;
+  color: var(--warning-500);
+}
+
+.segmented-option[data-selected='yes'] .segmented-routed {
+  color: var(--success-500);
+}
+
+/* ------------------------------------------------------------------- note */
+.archetype-note {
+  min-height: 1.2em; /* reserved, so the row does not jump when it appears */
+  font-size: var(--text-xs);
+  color: var(--warning-700);
+}
+
+.archetype-note:empty {
+  min-height: 0;
+}
+
+.archetype-note em {
+  font-style: normal;
+  font-family: var(--font-mono);
+}
+
+.archetype-reset {
+  font-size: inherit;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.archetype-reset:hover {
+  color: var(--accent-hover);
+}
