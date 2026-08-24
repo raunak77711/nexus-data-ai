@@ -1,0 +1,304 @@
+/**
+ * My datasets, and the comparison that appears under it.
+ *
+ * The list rows carry a score dial on the left, which is the one piece of
+ * information that makes this list worth having: a column of rings tells you at
+ * a glance which of your files are trustworthy, and no other arrangement of
+ * these fields does that.
+ */
+
+.datasets {
+  max-inline-size: 860px;
+}
+
+.datasets__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+}
+
+.datasets__lede {
+  margin: var(--space-2) 0 var(--space-4);
+  max-inline-size: var(--measure);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--fg-muted);
+}
+
+.datasets__loading,
+.datasets__empty {
+  font-size: var(--text-sm);
+  color: var(--fg-subtle);
+}
+
+.datasets__error {
+  padding: var(--space-2);
+  background: var(--danger-100);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--danger-700);
+}
+
+/* ----------------------------------------------------------------- list -- */
+
+.datasets__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.dataset {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+/* The open dataset is marked by an ink edge rather than a fill, so it reads as
+   "you are here" rather than as "this one is selected for an action". */
+.dataset[data-current='true'] {
+  border-inline-start: 2px solid var(--fg);
+}
+
+.dataset__score {
+  flex: none;
+  inline-size: 44px;
+  display: flex;
+  justify-content: center;
+}
+
+.dataset__score-none {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--fg-faint);
+}
+
+.dataset__body {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.dataset__name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-normal);
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+
+.dataset__badge {
+  padding: 1px var(--space-1);
+  background: var(--accent);
+  border-radius: var(--radius-pill);
+
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--accent-fg);
+}
+
+.dataset__badge--quiet {
+  background: var(--bg-inset);
+  color: var(--fg-subtle);
+}
+
+.dataset__meta {
+  margin: 2px 0 0;
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.dataset__actions {
+  display: flex;
+  gap: var(--space-05);
+  flex: none;
+  flex-wrap: wrap;
+}
+
+.dataset__action {
+  padding: var(--space-05) var(--space-1);
+
+  background: none;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dataset__action {
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out);
+  }
+}
+
+.dataset__action:hover:not(:disabled) {
+  color: var(--fg);
+  border-color: var(--fg);
+}
+
+.dataset__action:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.dataset__action:disabled {
+  color: var(--fg-faint);
+  border-color: var(--border);
+  cursor: not-allowed;
+}
+
+.dataset__action--danger:hover:not(:disabled) {
+  color: var(--danger-700);
+  border-color: var(--danger-500);
+}
+
+@media (max-width: 640px) {
+  .dataset {
+    flex-wrap: wrap;
+  }
+  .dataset__actions {
+    inline-size: 100%;
+  }
+}
+
+/* ----------------------------------------------------------- comparison -- */
+
+.comparison {
+  margin-block-start: var(--space-5);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--border);
+}
+
+.comparison__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+
+.comparison__direction {
+  margin: var(--space-05) 0 var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+.comparison__summary {
+  margin: 0;
+  max-inline-size: var(--measure);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+
+.comparison__mark {
+  margin-block-start: var(--space-2);
+}
+
+.comparison__changes {
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.comparison__changes li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding-block: var(--space-2);
+  border-block-end: 1px solid var(--border);
+}
+
+.comparison__changes li:last-child {
+  border-block-end: none;
+}
+
+/* The arrow is the only coloured element, and the colour is the fact: this
+   went up, that went down. Direction is also stated in the headline text, so
+   the colour is redundant rather than load-bearing. */
+.comparison__arrow {
+  flex: none;
+  inline-size: 16px;
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  text-align: center;
+  color: var(--fg-subtle);
+}
+
+.comparison__changes li[data-direction='up'] .comparison__arrow,
+.comparison__changes li[data-direction='added'] .comparison__arrow {
+  color: var(--success-700);
+}
+
+.comparison__changes li[data-direction='down'] .comparison__arrow,
+.comparison__changes li[data-direction='removed'] .comparison__arrow {
+  color: var(--danger-700);
+}
+
+.comparison__change-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.comparison__change-body strong {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--fg);
+}
+
+.comparison__change-body span {
+  max-inline-size: var(--measure);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  color: var(--fg-muted);
+}
+
+.comparison__pct {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-muted);
+}
+
+.comparison__columns {
+  margin: var(--space-3) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--fg-subtle);
+}

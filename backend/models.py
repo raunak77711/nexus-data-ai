@@ -206,6 +206,13 @@ class ChatResponse(BaseModel):
     data: Optional[Dict[str, Any]] = Field(
         default=None, description="The raw computed numbers behind the reply."
     )
+    followups: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Suggested next questions, each a different kind of move "
+        "away from what was just answered. Every one is checked against the "
+        "dataset's real columns first, since a suggestion the assistant then "
+        "cannot answer reads as a broken product rather than a bad suggestion.",
+    )
 
 
 # ------------------------------------------------------------------ assistant
@@ -402,6 +409,225 @@ class PreviewResponse(BaseModel):
     n_rows_total: int
     n_rows_returned: int
     truncated: bool
+    profile: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="The per-column profile for the rows being returned. Sent "
+        "with the preview rather than fetched separately because the two must "
+        "describe the SAME frame: after a clean the columns and their types "
+        "change, and a profile fetched from anywhere else would describe the "
+        "uploaded file while the rows beside it came from the cleaned one.",
+    )
+
+
+# ------------------------------------------------------- autonomous analysis
+#
+# The models below share a convention worth stating once: their list items are
+# typed Dict[str, Any] rather than modelled field by field. That is the same
+# judgement the module docstring makes about `stats` and `profile`, applied to
+# richer payloads -- an insight card, a health issue and a dashboard panel each
+# carry an `evidence` dict whose keys depend on which analysis pass produced it,
+# and modelling that as a union would encode core/'s internals into the HTTP
+# layer and force a change here every time a pass learns a new statistic.
+#
+# What IS policed is the envelope: the top-level fields the frontend switches
+# on. Those are named and typed, so a refactor that stops producing `score` or
+# `panels` fails loudly on the server rather than rendering as undefined.
+
+
+class HealthResponseBody(BaseModel):
+    """A dataset's quality report -- the Data Health screen."""
+
+    score: Optional[float] = Field(
+        default=None,
+        description="0-100, or null when the checks could not be run.",
+    )
+    grade: str
+    verdict: str
+    headline: str
+    issues: List[Dict[str, Any]]
+    counts: Dict[str, int]
+    n_fixable: int
+    checks_run: int
+    sampled: bool = Field(
+        default=False,
+        description="True when the checks ran on a sample of a very large file.",
+    )
+    n_rows: int
+    n_cols: int
+    clean: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Checks that found nothing, so a short issue list is legible.",
+    )
+
+
+class CleanRequest(BaseModel):
+    """Which repairs the user approved.
+
+    `issue_ids` of None means every fixable issue -- the "fix everything"
+    button. An EMPTY LIST means none, which is a different request and must not
+    be conflated with None; that distinction is why this is Optional rather than
+    defaulting to an empty list.
+    """
+
+    issue_ids: Optional[List[str]] = None
+
+
+class CleanPlanResponse(BaseModel):
+    """What would be changed, before anything is."""
+
+    steps: List[Dict[str, Any]]
+    n_steps: int
+    note: str
+
+
+class CleanResponse(BaseModel):
+    """What was actually changed, after the fact."""
+
+    summary: str
+    log: List[Dict[str, Any]]
+    applied: List[str]
+    rows_before: int
+    rows_after: int
+    cols_before: int
+    cols_after: int
+    cells_changed: int
+    health: Dict[str, Any] = Field(
+        description="The re-run health report, so the score updates immediately."
+    )
+    is_cleaned: bool
+
+
+class BriefingResponse(BaseModel):
+    """The AI briefing: what this dataset is and what matters in it."""
+
+    headline: str
+    summary: str
+    points: List[Dict[str, Any]]
+    source: Literal["llm", "rules"]
+    n_considered: int
+
+
+class DashboardResponse(BaseModel):
+    """The auto-composed dashboard: chosen charts and headline numbers."""
+
+    kpis: List[Dict[str, Any]]
+    panels: List[Dict[str, Any]]
+    note: str
+    n_considered: int
+    time_col: Optional[str] = None
+    measures: List[str] = Field(default_factory=list)
+
+
+class RecommendationsResponse(BaseModel):
+    """Suggested next steps, always carrying their own disclaimer.
+
+    `disclaimer` is part of the payload rather than frontend copy on purpose: a
+    caller rendering these somewhere else must not be able to present a model's
+    inference as a measurement by forgetting to add the label.
+    """
+
+    recommendations: List[Dict[str, Any]]
+    source: Literal["llm", "rules"]
+    disclaimer: str
+
+
+class QuestionsResponse(BaseModel):
+    """Questions this dataset can answer, for a user who does not have any."""
+
+    questions: List[Dict[str, Any]]
+    source: Literal["llm", "rules"]
+
+
+class TimelineResponse(BaseModel):
+    """What the server did to this dataset, and when."""
+
+    events: List[Dict[str, Any]]
+    n_events: int
+
+
+class ExplainRequest(BaseModel):
+    """Ask for one thing on screen to be explained.
+
+    `target` names what to explain and `ref` identifies which one -- an insight
+    id, a health issue id, a dashboard panel id. The pair is used instead of a
+    free-form payload so the server explains something it computed rather than
+    something the client described, which is what keeps the explanation
+    grounded in real numbers.
+    """
+
+    target: Literal["insight", "health_issue", "chart", "kpi"]
+    ref: str
+    level: Literal["simple", "technical"] = "simple"
+
+
+class ExplainResponse(BaseModel):
+    """One explanation, at one level of detail."""
+
+    text: str
+    level: Literal["simple", "technical"]
+    source: Literal["llm", "rules"]
+    title: str
+
+
+class DatasetSummary(BaseModel):
+    """One card on the My Datasets screen."""
+
+    id: str
+    filename: str
+    n_rows: int
+    n_cols: int
+    created_at: str
+    last_seen: str
+    health_score: Optional[float] = None
+    health_grade: Optional[str] = None
+    archetype: Optional[str] = None
+    is_cleaned: bool = False
+    analysed: bool = False
+    n_events: int = 0
+    loaded: bool = Field(
+        default=False,
+        description="Whether the frame is currently parsed in memory.",
+    )
+
+
+class CompareRequest(BaseModel):
+    """Compare the current dataset against another stored one."""
+
+    other_id: str
+
+
+class CompareResponse(BaseModel):
+    """What changed between two datasets."""
+
+    comparable: bool = Field(
+        description="False when the two files share no columns at all."
+    )
+    changes: List[Dict[str, Any]]
+    columns: Dict[str, Any]
+    shape: Dict[str, Any]
+    summary: str
+    n_changes: int
+    conflicts: Dict[str, Any] = Field(default_factory=dict)
+    source: Literal["llm", "rules"] = "rules"
+
+
+class ReportResponse(BaseModel):
+    """A full analysis report, structured for the renderer to lay out."""
+
+    title: str
+    subtitle: str
+    dataset_name: str
+    filename: str
+    generated_at: str
+    generated_display: str
+    sections: List[Dict[str, Any]]
+    meta: Dict[str, Any]
+
+
+class FollowUpsResponse(BaseModel):
+    """What to ask next, after an answer."""
+
+    followups: List[Dict[str, Any]]
 
 
 # ---------------------------------------------------------------------- error

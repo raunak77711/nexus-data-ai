@@ -140,7 +140,24 @@ def ingest(content: bytes, filename: str) -> Tuple[Session, pd.DataFrame]:
     # add anything except the illusion of care.
     routing = route_profile(profile)
 
-    session = store.create(filename=filename, df=frame, profile=profile, routing=routing)
+    # The bytes are handed over so the dataset can be re-read after a restart or
+    # an eviction. Without them the dataset would exist only for as long as this
+    # process holds its frame, and the My Datasets screen would list entries
+    # that vanish when opened.
+    session = store.create(
+        filename=filename,
+        df=frame,
+        profile=profile,
+        routing=routing,
+        content=content,
+    )
+    session.record(
+        "routed",
+        f"Worked out that this is {routing['archetype']} data"
+        f"{' using AI' if routing['source'] == 'llm' else ' from its column types'}.",
+        archetype=routing["archetype"],
+        source=routing["source"],
+    )
     logger.info(
         "Session %s: %s (%d rows x %d cols) routed to %s via %s",
         session.id, filename, profile["n_rows"], profile["n_cols"],

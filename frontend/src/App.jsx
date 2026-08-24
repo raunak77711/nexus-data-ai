@@ -1,199 +1,187 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import * as api from './api'
-import ArchetypeSelect from './components/ArchetypeSelect'
-import ChatPanel from './components/ChatPanel'
-import EmptyState from './components/EmptyState'
-import ForecastPanel from './components/ForecastPanel'
-import ProfileTable from './components/ProfileTable'
-import RoutingBanner from './components/RoutingBanner'
-import StatsStrip from './components/StatsStrip'
-import UploadPane from './components/UploadPane'
-import WorldView from './components/WorldView'
+import useAnalysis from './hooks/useAnalysis'
+import Analyzing from './components/Analyzing'
+import Assistant from './components/Assistant'
+import Landing from './components/Landing'
+import Workspace from './components/Workspace'
 import './App.css'
 
 /**
- * Layout shell, session state, and every fetch the app makes.
+ * The whole application: three screens and a panel over all of them.
  *
- * STATE LIVES HERE, DELIBERATELY. There is no store and no context. The whole
- * application state is one session id and the four things derived from it
- * (profile, routing, world, forecast), and every component that needs any of
- * them is at most two levels down. Introducing Redux or a context provider for
- * that would be architecture as decoration -- more files, more indirection, and
- * nothing that could not be read off this one component.
+ *      landing  →  analysing  →  workspace
+ *      (add a      (real         (story, charts, health, actions,
+ *       file)       stages)       rows, report, datasets)
  *
- * The rule the components follow: they render props and raise events. Not one
- * of them calls fetch. That is what makes them testable in isolation and what
- * keeps every loading and error state visible in a single place -- here -- where
- * it is possible to check that none of them is missing.
+ * WHAT THIS FILE OWNS AND WHAT IT DOES NOT
+ * ----------------------------------------
+ * It owns the session, the screen, and the two pieces of cross-cutting state
+ * that genuinely belong to the whole app: whether the assistant is open, and
+ * which detail mode the user is in. Everything else lives where it is used.
+ *
+ * The analysis itself is not here — `useAnalysis` runs it and owns its stages,
+ * its cache and its race protection. That separation is what keeps this file
+ * readable: this decides WHICH screen, that decides what is on it.
+ *
+ * DETAIL MODE IS PERSISTED, THE OPEN TAB IS NOT. A person who chose Advanced
+ * chose it about themselves and expects it to survive a reload; a person who
+ * was last on the Health tab was there about one dataset and expects to land on
+ * the Story when they come back. The distinction is what state belongs to the
+ * user versus what belongs to the visit.
  */
 
-const DEFAULT_PARAMS = { freq: 'D', rolling_window: 7, time_filter: null }
+const MODE_KEY = 'nexus:mode'
+
+function readMode() {
+  try {
+    const stored = window.localStorage.getItem(MODE_KEY)
+    return stored === 'advanced' ? 'advanced' : 'beginner'
+  } catch {
+    // Private browsing, or site data blocked. A preference is not worth an
+    // error path; the default is a perfectly good answer.
+    return 'beginner'
+  }
+}
 
 export default function App() {
-  // ---------------------------------------------------------------- session
   const [session, setSession] = useState(null)
-  const [routing, setRouting] = useState(null)
-  const [uploadStatus, setUploadStatus] = useState('idle') // idle|uploading|loaded|error
+  const [uploadStatus, setUploadStatus] = useState('idle') // idle|uploading|error
   const [uploadError, setUploadError] = useState('')
   const [pendingSample, setPendingSample] = useState(null)
+  const [pendingName, setPendingName] = useState('')
 
-  // ------------------------------------------------------------------ world
-  const [archetype, setArchetype] = useState(null)
-  const [params, setParams] = useState(DEFAULT_PARAMS)
-  const [world, setWorld] = useState(null)
-  const [worldLoading, setWorldLoading] = useState(false)
-  const [worldError, setWorldError] = useState('')
-  /**
-   * True only for the first successful world of a session.
-   *
-   * The world-building moment is the emotional core of the demo, so it fires
-   * once and then gets out of the way: replaying the flourish every time the
-   * user nudges a slider would turn the one moment that should feel like an
-   * event into an animation they are waiting through.
-   */
-  const [worldArrived, setWorldArrived] = useState(false)
-  const arrivedFor = useRef(null)
+  const [tab, setTab] = useState('story')
+  const [mode, setMode] = useState(readMode)
+  const [assistantOpen, setAssistantOpen] = useState(false)
+  const [pendingQuestion, setPendingQuestion] = useState(null)
 
-  // --------------------------------------------------------------- forecast
-  const [forecast, setForecast] = useState(null)
-  const [forecastLoading, setForecastLoading] = useState(false)
-  const [forecastError, setForecastError] = useState('')
-  const [horizon, setHorizon] = useState(14)
-
-  // ------------------------------------------------------------ environment
-  const [samples, setSamples] = useState(null) // null = still loading
+  const [samples, setSamples] = useState(null)
+  const [recentDatasets, setRecentDatasets] = useState([])
   const [backend, setBackend] = useState({ state: 'checking', version: '' })
 
-  /**
-   * Guards against a stale response overwriting a newer one.
-   *
-   * Dragging the rolling-window slider can put two world requests in flight;
-   * they are not guaranteed to come back in the order they were sent, and the
-   * older one arriving second would silently replace the chart the user is
-   * actually waiting for. Each request takes a ticket, and only the newest
-   * ticket is allowed to write state.
-   */
-  const worldTicket = useRef(0)
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(MODE_KEY, mode)
+    } catch {
+      /* see readMode */
+    }
+  }, [mode])
 
-  /** The world's heading, so focus can be moved there once a world exists. */
-  const worldAnchor = useRef(null)
-
-  /**
-   * Ask the grounded assistant a question.
-   *
-   * Passed down as a prop rather than letting ChatPanel fetch, for the same
-   * reason as every other component here: the network lives in one place. The
-   * panel owns the transcript, because that is genuinely local to it -- nothing
-   * else on the page reads the conversation.
-   */
-  const askAssistant = useCallback(
-    async (question, history) => {
-      if (!session) throw new Error('No dataset is loaded.')
-      return api.sendChat(session.session_id, question, history)
-    },
-    [session],
-  )
-
-  /**
-   * A 404 on any call means the server has forgotten this upload. Say so.
-   *
-   * Declared before the effects that call it rather than hoisted below them:
-   * a function declaration would work at runtime, but reading the file top to
-   * bottom should not require knowing that.
-   */
+  /** A 404 on any call means the server has forgotten this dataset. Say so. */
   const expireSession = useCallback(() => {
     setSession(null)
-    setRouting(null)
-    setArchetype(null)
-    setWorld(null)
-    setForecast(null)
     setUploadStatus('error')
-    setUploadError('That session expired on the server. Please upload the file again.')
+    setUploadError(
+      'That dataset is no longer on the server. Add the file again, or open ' +
+        'one of your stored datasets.',
+    )
   }, [])
 
-  /* ------------------------------------------------------------ boot checks */
+  const analysis = useAnalysis(session?.session_id, { onExpired: expireSession })
+
+  /* ------------------------------------------------------------ boot ----- */
+  /**
+   * Health is watched until it answers rather than probed once and believed.
+   *
+   * Asking exactly once at mount produced the worst kind of wrong banner: open
+   * the page while the server is still booting — the normal order when both are
+   * started together — and the app announced nothing was responding for the
+   * rest of the session, telling the user to start a server that was by then
+   * already running. Nothing cleared it because nothing asked again.
+   */
   useEffect(() => {
     let cancelled = false
+    let timer = 0
+    let attempt = 0
+    let loaded = false
 
-    api
-      .getHealth()
-      .then((body) => {
-        if (!cancelled) setBackend({ state: 'up', version: body.version })
-      })
-      .catch((error) => {
-        if (!cancelled) setBackend({ state: 'down', message: error.message })
-      })
+    const loadExtras = () => {
+      api
+        .listSamples()
+        .then((list) => !cancelled && setSamples(list))
+        .catch(() => !cancelled && setSamples([]))
+      api
+        .listDatasets()
+        .then((list) => !cancelled && setRecentDatasets(list.slice(0, 4)))
+        .catch(() => {})
+    }
 
-    api
-      .listSamples()
-      .then((list) => {
-        if (!cancelled) setSamples(list)
-      })
-      .catch(() => {
-        // A failed sample listing is not worth an error banner: the upload zone
-        // still works, and the empty state degrades to "no samples on the
-        // server", which is the same thing the user needs to know either way.
-        if (!cancelled) setSamples([])
-      })
+    const probe = () => {
+      if (cancelled) return
+      api
+        .getHealth()
+        .then((body) => {
+          if (cancelled) return
+          attempt = 0
+          setBackend({ state: 'up', version: body.version })
+          if (!loaded) {
+            loaded = true
+            loadExtras()
+          }
+        })
+        .catch((error) => {
+          if (cancelled) return
+          setBackend({ state: 'down', message: error.message })
+          // 1s, 2s, 4s, 8s, then every 15s for as long as the tab is open.
+          timer = window.setTimeout(probe, Math.min(1000 * 2 ** attempt, 15000))
+          attempt += 1
+        })
+    }
+
+    // A tab left open across a restart, or a laptop waking, should recover on
+    // the user's next glance rather than waiting out the backoff.
+    const recheck = () => {
+      if (cancelled) return
+      window.clearTimeout(timer)
+      attempt = 0
+      probe()
+    }
+
+    probe()
+    window.addEventListener('online', recheck)
+    window.addEventListener('focus', recheck)
 
     return () => {
       cancelled = true
+      window.clearTimeout(timer)
+      window.removeEventListener('online', recheck)
+      window.removeEventListener('focus', recheck)
     }
   }, [])
 
-  /* ------------------------------------------------------------- new upload */
-  const adoptSession = useCallback(async (payload) => {
+  /* ---------------------------------------------------------- uploading -- */
+  const adopt = useCallback((payload) => {
     setSession(payload)
-    setUploadStatus('loaded')
+    setUploadStatus('idle')
     setUploadError('')
-    setWorld(null)
-    setForecast(null)
-    setForecastError('')
-    setWorldError('')
-    setParams(DEFAULT_PARAMS)
-    setWorldArrived(false)
-    arrivedFor.current = null
-
-    try {
-      const decision = await api.getRoute(payload.session_id)
-      setRouting(decision)
-      setArchetype(decision.archetype)
-    } catch (error) {
-      // The upload itself succeeded, so the session is usable; only the banner
-      // is missing. Falling back to tabular gives the user something rather
-      // than a page stuck with no archetype selected.
-      setRouting(null)
-      setArchetype('tabular')
-      setWorldError(`Routing could not be read: ${error.message}`)
-    }
+    setTab('story')
   }, [])
 
   const handleFile = useCallback(
     async (file) => {
       setUploadStatus('uploading')
       setUploadError('')
+      setPendingName(file.name)
       try {
-        const payload = await api.uploadCsv(file)
-        // The File object is the only place the byte size is known -- the API
-        // reports rows and columns, not bytes.
-        await adoptSession({ ...payload, file_size: file.size })
+        adopt(await api.uploadCsv(file))
       } catch (error) {
         setUploadStatus('error')
         setUploadError(error.message)
       }
     },
-    [adoptSession],
+    [adopt],
   )
 
   const handleSample = useCallback(
     async (key) => {
+      const meta = samples?.find((sample) => sample.key === key)
       setPendingSample(key)
+      setPendingName(meta?.filename ?? '')
       setUploadStatus('uploading')
       setUploadError('')
       try {
-        const payload = await api.loadSample(key)
-        const meta = samples?.find((sample) => sample.key === key)
-        await adoptSession({ ...payload, file_size: meta?.n_bytes })
+        adopt(await api.loadSample(key))
       } catch (error) {
         setUploadStatus('error')
         setUploadError(error.message)
@@ -201,283 +189,161 @@ export default function App() {
         setPendingSample(null)
       }
     },
-    [adoptSession, samples],
+    [adopt, samples],
   )
 
-  /* --------------------------------------------------------- build the world */
-  useEffect(() => {
-    if (!session || !archetype) return undefined
-
-    const ticket = ++worldTicket.current
-    let cancelled = false
-
-    // Setting state at the top of a fetch effect is exactly the case the
-    // "no setState in an effect" guidance carves out: the effect IS the
-    // synchronisation with an external system, and the loading flag has to be
-    // raised in the same tick the request leaves, or there is a frame in which
-    // the old world is on screen with no indication that a new one is coming.
-    // oxlint-disable-next-line react/set-state-in-effect -- see above
-    setWorldLoading(true)
-    setWorldError('')
-
-    api
-      .buildWorld(session.session_id, archetype, params)
-      .then((payload) => {
-        if (cancelled || ticket !== worldTicket.current) return
-        setWorld(payload)
-
-        // Fire the arrival flourish once per session, and only for a world that
-        // actually built -- announcing "your world is ready" over an
-        // insufficient_data message would be worse than saying nothing.
-        if (payload.status === 'ok' && arrivedFor.current !== session.session_id) {
-          arrivedFor.current = session.session_id
-          setWorldArrived(true)
-          window.setTimeout(() => setWorldArrived(false), 2200)
-          // Move focus to the world so a keyboard user is taken to the result
-          // rather than left at the top of a page that has changed underneath
-          // them. Focus, not just scroll -- scrolling alone moves the viewport
-          // and leaves the tab position behind it.
-          window.requestAnimationFrame(() => worldAnchor.current?.focus())
-        }
-      })
-      .catch((error) => {
-        if (cancelled || ticket !== worldTicket.current) return
-        setWorld(null)
-        setWorldError(error.message)
-        if (error.status === 404) expireSession()
-      })
-      .finally(() => {
-        if (!cancelled && ticket === worldTicket.current) setWorldLoading(false)
-      })
-
-    return () => {
-      cancelled = true
-    }
-    // `params` is a fresh object on every change, which is exactly the intent:
-    // any control change is a new world.
-  }, [session, archetype, params, expireSession])
-
-  /* ------------------------------------------------------------- forecasting */
-  const runForecast = useCallback(async () => {
-    if (!session) return
-    setForecastLoading(true)
-    setForecastError('')
-    try {
-      const payload = await api.runForecast(session.session_id, horizon)
-      setForecast(payload)
-    } catch (error) {
-      setForecast(null)
-      setForecastError(error.message)
-      if (error.status === 404) expireSession()
-    } finally {
-      setForecastLoading(false)
-    }
-  }, [session, horizon, expireSession])
-
-  /* ------------------------------------------------------------------ derived */
-
   /**
-   * Day bounds for the geo time slider, read from the profile's own date stats.
+   * Open a stored dataset.
    *
-   * Derived rather than requested: profile_column already returns min_date and
-   * max_date for every datetime column, so a dedicated endpoint would be a
-   * second source for a number the client is already holding.
+   * The whole record from the datasets list is passed in rather than just an
+   * id, because the list already holds the filename and the shape and /route
+   * does not return either — fetching the id alone would land the user in a
+   * workspace labelled "dataset.csv, 0 rows" until the analysis caught up.
+   *
+   * Nothing else is needed: setting the session is enough for `useAnalysis` to
+   * run, and the server re-reads the file from disk if it has been evicted.
    */
-  const timeBounds = useMemo(() => {
-    const name = routing?.time_col
-    if (!name || !session?.profile) return null
-    const column = session.profile.columns.find((item) => item.name === name)
-    if (!column?.min_date || !column?.max_date) return null
+  const openDataset = useCallback((dataset) => {
+    setSession({
+      session_id: dataset.id,
+      filename: dataset.filename,
+      n_rows: dataset.n_rows,
+      n_cols: dataset.n_cols,
+      is_cleaned: dataset.is_cleaned,
+    })
+    setTab('story')
+    setUploadStatus('idle')
+    setUploadError('')
+  }, [])
 
-    const startMs = Date.parse(column.min_date)
-    const endMs = Date.parse(column.max_date)
-    if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs <= startMs) return null
+  const startOver = useCallback(() => {
+    setSession(null)
+    setUploadStatus('idle')
+    setUploadError('')
+    setTab('story')
+    // Re-read the list on the way out, so the file just analysed is on the
+    // landing page when it arrives rather than one visit behind.
+    api
+      .listDatasets()
+      .then((list) => setRecentDatasets(list.slice(0, 4)))
+      .catch(() => {})
+  }, [])
 
-    return { startMs, endMs, totalDays: Math.ceil((endMs - startMs) / 86_400_000) }
-  }, [routing, session])
+  /* ----------------------------------------------------------- asking ---- */
+  /** Send a question to the assistant from anywhere, opening it if closed. */
+  const ask = useCallback((question) => {
+    setAssistantOpen(true)
+    setPendingQuestion(question)
+  }, [])
 
-  const canForecast = Boolean(routing?.time_col && routing?.target_col)
+  /* ---------------------------------------------------------- cleaning --- */
+  /**
+   * After a clean the frame has changed, so every cached analysis is about a
+   * dataset that no longer exists. The health report comes back in the response
+   * and is patched straight in — the user is looking at the score and it must
+   * move now — and the rest is recomputed.
+   */
+  const handleCleaned = useCallback(
+    (result) => {
+      setSession((current) =>
+        current ? { ...current, is_cleaned: true, n_rows: result.rows_after } : current,
+      )
+      analysis.patch('health', result.health)
+      analysis.refresh()
+    },
+    [analysis],
+  )
 
-  /* --------------------------------------------------------------- rendering */
+  const handleReverted = useCallback(
+    (result) => {
+      setSession((current) =>
+        current ? { ...current, is_cleaned: false, n_rows: result.rows_after } : current,
+      )
+      analysis.patch('health', result.health)
+      analysis.refresh()
+    },
+    [analysis],
+  )
+
+  /* --------------------------------------------------------- rendering --- */
+
+  const preparing = uploadStatus === 'uploading' || (Boolean(session) && !analysis.done)
+  const inWorkspace = Boolean(session) && analysis.done
+
   return (
     <>
-      <a className="skip-link" href="#main">Skip to content</a>
+      <a className="skip-link" href="#main">
+        Skip to content
+      </a>
 
-      <header className="app-header">
-        <div className="app-header-inner">
-          <a className="brand" href="/">
-            <span className="brand-mark" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
-                   strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="9" />
-                <path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18" />
-              </svg>
-            </span>
-            <span className="brand-text">
-              AI Data <strong>Worlds</strong>
-            </span>
-          </a>
-
-          <div className="app-header-right">
-            {session && (
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => {
-                  setSession(null)
-                  setRouting(null)
-                  setArchetype(null)
-                  setWorld(null)
-                  setForecast(null)
-                  setUploadStatus('idle')
-                  setUploadError('')
-                }}
-              >
-                New dataset
-              </button>
-            )}
-            <span className="health" data-state={backend.state} title={backend.message ?? ''}>
-              <span className="health-dot" aria-hidden="true" />
-              {backend.state === 'up' && `API v${backend.version}`}
-              {backend.state === 'checking' && 'Connecting…'}
-              {backend.state === 'down' && 'API offline'}
-            </span>
-          </div>
-        </div>
-      </header>
-
-      <main className="app-main" id="main">
+      <main className="app-shell" id="main">
         {backend.state === 'down' && (
-          <p className="status-note app-offline" data-tone="error">
-            <strong>The API is not responding.</strong> {backend.message} Start it
-            with <code>uvicorn backend.main:app --reload</code> and reload this page.
-          </p>
+          <div className="offline-banner">
+            <p className="status-note" data-tone="error">
+              <strong>Not connected.</strong> The part of Nexus that reads your
+              file is not running. Start it with{' '}
+              <code>uvicorn backend.main:app --reload</code> or{' '}
+              <code>docker compose up</code> — this page reconnects on its own.
+            </p>
+          </div>
         )}
 
-        {!session ? (
-          <>
-            <EmptyState
-              samples={samples}
-              onLoadSample={handleSample}
-              loadingKey={pendingSample}
-              disabled={uploadStatus === 'uploading' || backend.state === 'down'}
-            />
-            <div className="empty-upload">
-              <UploadSection
-                onFile={handleFile}
-                status={uploadStatus}
-                error={uploadError}
-                disabled={backend.state === 'down'}
-              />
-            </div>
-          </>
-        ) : (
-          <div className="workspace">
-            <div className="workspace-top">
-              <StatsStrip profile={session.profile} filename={session.filename} />
-            </div>
+        {preparing && (
+          <Analyzing
+            filename={session?.filename ?? pendingName}
+            stages={analysis.stages}
+            stageIndex={session ? analysis.stageIndex : 0}
+            error={analysis.error}
+          />
+        )}
 
-            <div className="workspace-body">
-              <div className="workspace-main">
-                <RoutingBanner routing={routing} />
+        {!preparing && !session && (
+          <Landing
+            onFile={handleFile}
+            samples={samples}
+            onLoadSample={handleSample}
+            loadingKey={pendingSample}
+            uploadStatus={uploadStatus}
+            uploadError={uploadError}
+            disabled={backend.state === 'down'}
+            onOpenAssistant={() => setAssistantOpen(true)}
+            recent={recentDatasets}
+            onOpenDataset={openDataset}
+          />
+        )}
 
-                <ArchetypeSelect
-                  value={archetype}
-                  routed={routing?.archetype}
-                  onChange={setArchetype}
-                  disabled={worldLoading}
-                />
-
-                <WorldView
-                  /* Keyed on the session so a new dataset gets fresh controls
-                     rather than inheriting the previous file's slider values. */
-                  key={session.session_id}
-                  anchorRef={worldAnchor}
-                  arrived={worldArrived}
-                  archetype={archetype}
-                  world={world}
-                  params={params}
-                  onParamsChange={setParams}
-                  loading={worldLoading}
-                  error={worldError}
-                  timeBounds={timeBounds}
-                />
-
-                {canForecast && (
-                  <ForecastPanel
-                    forecast={forecast}
-                    loading={forecastLoading}
-                    error={forecastError}
-                    onRun={runForecast}
-                    horizon={horizon}
-                    onHorizonChange={setHorizon}
-                  />
-                )}
-              </div>
-
-              <aside className="workspace-side" aria-label="Dataset details">
-                {/* Chat sits above the column table because it is the thing a
-                    user reaches for, and the table is reference material they
-                    scroll to. Keyed on the session so switching datasets starts
-                    a fresh conversation rather than carrying answers about the
-                    previous file into questions about this one. */}
-                <ChatPanel
-                  key={session.session_id}
-                  onSend={askAssistant}
-                  disabled={backend.state === 'down'}
-                />
-
-                <section className="panel side-panel" aria-labelledby="profile-heading">
-                  <div className="section-title">
-                    <h2 id="profile-heading">Columns</h2>
-                    <span className="section-note tnum">{session.profile.n_cols}</span>
-                  </div>
-                  <ProfileTable profile={session.profile} />
-                </section>
-
-                <section className="panel side-panel" aria-labelledby="replace-heading">
-                  <h2 id="replace-heading" className="side-panel-heading">
-                    Swap the dataset
-                  </h2>
-                  <UploadSection
-                    onFile={handleFile}
-                    status={uploadStatus === 'loaded' ? 'idle' : uploadStatus}
-                    error={uploadError}
-                    disabled={backend.state === 'down'}
-                    compact
-                  />
-                </section>
-              </aside>
-            </div>
-          </div>
+        {inWorkspace && (
+          <Workspace
+            session={session}
+            analysis={analysis}
+            tab={tab}
+            onTab={setTab}
+            mode={mode}
+            onMode={setMode}
+            onAsk={ask}
+            onOpenAssistant={() => setAssistantOpen(true)}
+            assistantOpen={assistantOpen}
+            onStartOver={startOver}
+            onOpenDataset={openDataset}
+            onCleaned={handleCleaned}
+            onReverted={handleReverted}
+          />
         )}
       </main>
 
-      <footer className="app-footer">
-        <p>
-          Every figure ships with the code that produced it — not a description of
-          it, the source that ran.
-        </p>
-      </footer>
-    </>
-  )
-}
-
-/**
- * Thin wrapper so the upload zone can appear both on the empty state and in the
- * sidebar without either call site repeating the prop list.
- */
-function UploadSection({ onFile, status, error, disabled, compact, filename, fileSize }) {
-  return (
-    <div className={compact ? 'upload-compact' : undefined}>
-      <UploadPane
-        onFile={onFile}
-        status={status}
-        error={error}
-        disabled={disabled}
-        filename={filename ?? null}
-        fileSize={fileSize ?? null}
+      {/* Outside <main>, and mounted on every screen including the landing
+          page. `sessionId` only changes which assistant answers on the server —
+          it is never a reason to hide the panel, since the moment before an
+          upload is the moment somebody is most likely to need one. */}
+      <Assistant
+        open={assistantOpen}
+        onClose={() => setAssistantOpen(false)}
+        sessionId={session?.session_id ?? null}
+        filename={session?.filename ?? ''}
+        suggestions={analysis.questions?.questions ?? []}
+        pendingQuestion={pendingQuestion}
+        onPendingConsumed={() => setPendingQuestion(null)}
       />
-    </div>
+    </>
   )
 }

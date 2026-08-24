@@ -1,0 +1,139 @@
+/**
+ * The recommendations screen.
+ *
+ * The disclaimer is a real element at the top of the page rather than fine
+ * print at the bottom — see the component docstring for why that placement is
+ * the whole point of this screen's design.
+ */
+
+.recs {
+  max-inline-size: 720px;
+}
+
+.recs__loading,
+.recs__empty {
+  max-inline-size: var(--measure);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--fg-muted);
+}
+
+.recs__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+}
+
+.recs__disclaimer {
+  margin: var(--space-2) 0 var(--space-4);
+  padding: var(--space-2) var(--space-3);
+  max-inline-size: var(--measure);
+
+  background: var(--warning-100);
+  /* A left edge in the warning tone rather than a full border: it marks the
+     block as a caveat without turning it into an alert box the eye learns to
+     skip. */
+  border-inline-start: 2px solid var(--warning-500);
+  border-radius: var(--radius-sm);
+
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--warning-700);
+}
+
+.recs__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.rec {
+  padding: var(--space-3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.rec__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.rec__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-snug);
+  color: var(--fg);
+}
+
+/* Confidence is stated in words, in the mono voice the app uses for metadata.
+   Not a bar or a set of dots — those imply a precision the model does not have,
+   and three words are read faster than a gauge is decoded. */
+.rec__confidence {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+.rec[data-confidence='high'] .rec__confidence {
+  color: var(--fg-muted);
+}
+
+.rec__body {
+  margin: var(--space-1) 0 0;
+  max-inline-size: var(--measure);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.rec__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block-start: var(--space-3);
+}
+
+/* The escape hatch from a suggestion back to the evidence. It is the most
+   important control on this screen: a recommendation the user can immediately
+   interrogate is a starting point, and one they cannot is an assertion. */
+.rec__ask {
+  padding: var(--space-05) var(--space-1);
+
+  background: none;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+
+.rec__ask:hover {
+  color: var(--fg);
+  border-color: var(--fg);
+}
+
+.rec__ask:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}

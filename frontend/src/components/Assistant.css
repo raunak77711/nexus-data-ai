@@ -1,0 +1,491 @@
+/**
+ * The AI analyst panel.
+ *
+ * A drawer from the right rather than a floating bubble that expands. The
+ * difference matters at this product's scale: the assistant is expected to be
+ * used ALONGSIDE the content — "which channel is best" while looking at the
+ * chart of channels — and a bubble that expands over the page hides the thing
+ * being asked about. On a wide screen the workspace shifts left to make room
+ * (see Workspace.css) so both are visible at once.
+ *
+ * Below 900px there is no room for both, so it becomes a full-height sheet
+ * with a scrim. That is the one place the two layouts genuinely differ.
+ */
+
+.assistant {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-end: 0;
+  z-index: 60;
+
+  display: flex;
+  flex-direction: column;
+  inline-size: min(var(--panel-width), 100vw);
+
+  background: var(--bg-elevated);
+  border-inline-start: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+
+  /* Off-canvas by default. transform rather than `right` so the slide is
+     composited and does not relayout the page on every frame. */
+  transform: translateX(100%);
+  visibility: hidden;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .assistant {
+    transition:
+      transform var(--dur-slow) var(--ease-out),
+      visibility var(--dur-slow);
+  }
+}
+
+.assistant--open {
+  transform: none;
+  visibility: visible;
+}
+
+.assistant__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: rgb(11 11 13 / 0.32);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .assistant__scrim {
+    animation: scrim-in var(--dur-normal) var(--ease-out);
+  }
+}
+
+@keyframes scrim-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* On a wide screen the workspace makes room, so the panel is a column rather
+   than an overlay and the scrim would only be in the way. */
+@media (min-width: 900px) {
+  .assistant__scrim {
+    display: none;
+  }
+}
+
+/* ----------------------------------------------------------------- head -- */
+
+.assistant__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+
+  padding: var(--space-3);
+  border-block-end: 1px solid var(--border);
+  flex: none;
+}
+
+.assistant__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+}
+
+.assistant__context {
+  margin: 2px 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--fg-subtle);
+
+  /* A long filename truncates rather than wrapping the header onto three
+     lines. The full name is in the title attribute. */
+  max-inline-size: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assistant__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 28px;
+  block-size: 28px;
+  flex: none;
+
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--fg-subtle);
+  cursor: pointer;
+}
+
+.assistant__close:hover {
+  color: var(--fg);
+  border-color: var(--border);
+}
+
+.assistant__close:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.assistant__icon {
+  inline-size: 15px;
+  block-size: 15px;
+}
+
+/* --------------------------------------------------------------- scroll -- */
+
+.assistant__scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-3);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  scrollbar-width: thin;
+}
+
+/* -------------------------------------------------------------- bubbles -- */
+
+.bubble {
+  max-inline-size: 100%;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bubble {
+    animation: bubble-in var(--dur-normal) var(--ease-out);
+  }
+}
+
+@keyframes bubble-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* The user's turn is the only filled surface in the transcript. The assistant's
+   turns are unstyled text on the panel, which is the right asymmetry: the
+   assistant does most of the talking, and a column of filled bubbles at that
+   volume becomes a wall. */
+.bubble--user {
+  align-self: flex-end;
+  max-inline-size: 85%;
+  padding: var(--space-1) var(--space-2);
+
+  background: var(--accent);
+  border-radius: var(--radius-md);
+  border-end-end-radius: var(--radius-sm);
+  color: var(--accent-fg);
+}
+
+.bubble--assistant {
+  align-self: flex-start;
+  inline-size: 100%;
+}
+
+.bubble__text {
+  margin: 0;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+  /* An answer may contain a long column name with no spaces in it. */
+  overflow-wrap: anywhere;
+}
+
+.bubble--failed .bubble__text {
+  color: var(--danger-700);
+}
+
+.bubble__mark {
+  margin-block-start: var(--space-1);
+}
+
+/* ---------------------------------------------------------------- table -- */
+
+.bubble__table-wrap {
+  margin-block-start: var(--space-2);
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  scrollbar-width: thin;
+}
+
+.bubble__table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bubble__table th,
+.bubble__table td {
+  padding: 4px var(--space-1);
+  text-align: start;
+  border-block-end: 1px solid var(--border);
+}
+
+.bubble__table th {
+  background: var(--bg-inset);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+.bubble__table tr:last-child td {
+  border-block-end: none;
+}
+
+/* ---------------------------------------------------------------- chart -- */
+
+.bubble__chart-button {
+  margin-block-start: var(--space-1);
+  padding: var(--space-05) var(--space-1);
+
+  background: none;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+
+.bubble__chart-button:hover {
+  color: var(--fg);
+  border-color: var(--fg);
+}
+
+.bubble__chart-button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.bubble__chart {
+  margin-block-start: var(--space-2);
+  padding: var(--space-1);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.bubble__error {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  color: var(--danger-700);
+}
+
+/* ------------------------------------------------------------ followups -- */
+/* The feature that makes the conversation feel like it is going somewhere.
+   Set apart from the answer by a rule rather than a box: they belong to the
+   message above them, and a card around them would read as a separate turn. */
+
+.bubble__followups {
+  margin-block-start: var(--space-2);
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid var(--border);
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-05);
+}
+
+.bubble__followups-label {
+  margin: 0 0 var(--space-05);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+.bubble__followup {
+  inline-size: 100%;
+  padding: var(--space-1);
+
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+  text-align: start;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bubble__followup {
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out);
+  }
+}
+
+.bubble__followup:hover {
+  color: var(--fg);
+  border-color: var(--border-strong);
+}
+
+.bubble__followup:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------- thinking -- */
+
+.assistant__thinking {
+  display: inline-flex;
+  gap: 4px;
+  padding-block: var(--space-1);
+}
+
+.assistant__thinking i {
+  inline-size: 5px;
+  block-size: 5px;
+  border-radius: 50%;
+  background: var(--fg-faint);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .assistant__thinking i {
+    animation: think 1.15s var(--ease-in-out) infinite;
+  }
+  .assistant__thinking i:nth-child(2) { animation-delay: 0.14s; }
+  .assistant__thinking i:nth-child(3) { animation-delay: 0.28s; }
+}
+
+@keyframes think {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30%           { opacity: 1;   transform: translateY(-3px); }
+}
+
+/* -------------------------------------------------------------- prompts -- */
+
+.assistant__prompts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-05);
+  padding: 0 var(--space-3) var(--space-2);
+  flex: none;
+}
+
+.assistant__prompt {
+  padding: var(--space-1) var(--space-2);
+
+  background: var(--bg-inset);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+  text-align: start;
+  cursor: pointer;
+}
+
+.assistant__prompt:hover:not(:disabled) {
+  color: var(--fg);
+  border-color: var(--border-strong);
+}
+
+.assistant__prompt:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.assistant__prompt:disabled {
+  color: var(--fg-faint);
+  cursor: not-allowed;
+}
+
+/* ----------------------------------------------------------------- form -- */
+
+.assistant__form {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-1);
+
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  border-block-start: 1px solid var(--border);
+  flex: none;
+}
+
+.assistant__input {
+  flex: 1;
+  min-inline-size: 0;
+  padding: var(--space-1) var(--space-2);
+  resize: none;
+
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--fg);
+
+  /* Grows with the content up to a ceiling, then scrolls. field-sizing is the
+     one-line version of the usual scrollHeight dance; browsers without it fall
+     back to the fixed rows=1 height, which is the current behaviour anyway. */
+  field-sizing: content;
+  max-block-size: 140px;
+}
+
+.assistant__input:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -1px;
+  border-color: var(--fg);
+}
+
+.assistant__input:disabled {
+  color: var(--fg-faint);
+}
+
+.assistant__send {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 34px;
+  block-size: 34px;
+  flex: none;
+
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  color: var(--accent-fg);
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .assistant__send {
+    transition: background-color var(--dur-fast) var(--ease-out);
+  }
+}
+
+.assistant__send:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.assistant__send:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.assistant__send:disabled {
+  background: var(--bg-inset);
+  border-color: var(--border);
+  color: var(--fg-faint);
+  cursor: not-allowed;
+}

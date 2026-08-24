@@ -1,0 +1,422 @@
+/**
+ * The briefing screen.
+ *
+ * Typographically this is the most "document" surface in the app, on purpose:
+ * it is the one screen whose job is to be READ rather than operated. So the
+ * measure is tight, the display face does real work at two sizes, and there is
+ * no card around anything except where a card marks an interaction.
+ *
+ * The findings list is the exception and the centrepiece. Each row is a button
+ * spanning the full column with a rank number in the gutter — closer to a
+ * table of contents than to a card grid, which is the right metaphor: it is an
+ * ordered index of what is in the file.
+ */
+
+.story {
+  max-inline-size: 780px;
+}
+
+/* ----------------------------------------------------------------- head -- */
+
+.story__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-block-end: var(--space-5);
+  border-block-end: 1px solid var(--border);
+}
+
+.story__head-main {
+  min-inline-size: 0;
+}
+
+.story__eyebrow {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+.story__headline {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+  color: var(--fg);
+  text-wrap: balance;
+}
+
+.story__summary {
+  margin: var(--space-2) 0 0;
+  max-inline-size: var(--measure);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--fg-muted);
+}
+
+.story__head-mark {
+  margin-block-start: var(--space-2);
+}
+
+/* ---------------------------------------------------------------- score -- */
+
+.story__score {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+
+  padding: var(--space-2);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: start;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .story__score {
+    transition:
+      border-color var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out);
+  }
+}
+
+.story__score:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-inset);
+}
+
+.story__score:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.story__score-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.story__score-grade {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--fg);
+}
+
+.story__score-detail {
+  font-size: var(--text-2xs);
+  color: var(--fg-subtle);
+}
+
+@media (max-width: 640px) {
+  .story__head {
+    flex-direction: column;
+  }
+}
+
+/* --------------------------------------------------------------- points -- */
+
+.story__points {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.point {
+  border-block-end: 1px solid var(--border);
+}
+
+.point__main {
+  display: grid;
+  grid-template-columns: 34px 1fr 16px;
+  align-items: start;
+  gap: var(--space-2);
+  inline-size: 100%;
+
+  padding: var(--space-3) var(--space-1);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: start;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .point__main {
+    transition: background-color var(--dur-fast) var(--ease-out);
+  }
+}
+
+.point__main:hover {
+  background: var(--bg-inset);
+}
+
+.point__main:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.point__rank {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-wide);
+  color: var(--fg-faint);
+  /* Aligned to the cap height of the title rather than the label above it, so
+     the number reads as belonging to the headline. */
+  padding-block-start: 15px;
+}
+
+.point__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-05);
+  min-inline-size: 0;
+}
+
+.point__label {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+.point__title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-snug);
+  color: var(--fg);
+}
+
+.point__detail {
+  max-inline-size: var(--measure);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tone marks the KIND of finding, and it is the one place colour enters this
+   screen. A warning-toned finding gets a warm left edge on hover; a positive
+   one gets nothing extra. The asymmetry is intentional — "needs attention" is
+   worth flagging and "good news" is not, and colouring both would turn the
+   list into a scorecard. */
+.point[data-tone='warning'] .point__label {
+  color: var(--warning-700);
+}
+
+.point[data-tone='positive'] .point__label {
+  color: var(--success-700);
+}
+
+.point__chevron {
+  display: flex;
+  justify-content: center;
+  padding-block-start: 18px;
+  color: var(--fg-faint);
+}
+
+.chevron {
+  inline-size: 12px;
+  block-size: 12px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .chevron {
+    transition: transform var(--dur-normal) var(--ease-out);
+  }
+}
+
+.chevron--open {
+  transform: rotate(180deg);
+}
+
+/* ------------------------------------------------------------- evidence -- */
+
+.point__evidence {
+  padding: 0 var(--space-1) var(--space-3) calc(34px + var(--space-2) + var(--space-1));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .point__evidence {
+    animation: point-open var(--dur-normal) var(--ease-out);
+  }
+}
+
+@keyframes point-open {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (max-width: 600px) {
+  .point__evidence {
+    padding-inline-start: var(--space-1);
+  }
+  .point__main {
+    grid-template-columns: 24px 1fr 16px;
+  }
+  .point__title {
+    font-size: var(--text-base);
+  }
+}
+
+.point__chart {
+  margin-block-end: var(--space-2);
+  padding: var(--space-2);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.point__loading,
+.point__error,
+.point__pointer {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--fg-subtle);
+}
+
+.point__error {
+  color: var(--danger-700);
+}
+
+.point__link {
+  padding: 0;
+  background: none;
+  border: none;
+  border-block-end: 1px solid var(--border-strong);
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.point__link:hover {
+  border-color: var(--fg);
+}
+
+.story__empty {
+  margin: var(--space-4) 0 0;
+  max-inline-size: var(--measure);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--fg-muted);
+}
+
+/* ------------------------------------------------------------------ ask -- */
+
+.story__ask {
+  margin-block-start: var(--space-6);
+  padding: var(--space-4);
+  background: var(--bg-inset);
+  border-radius: var(--radius-lg);
+}
+
+.story__ask-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+}
+
+.story__ask-lede {
+  margin: var(--space-1) 0 var(--space-3);
+  max-inline-size: var(--measure);
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+
+.story__ask-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.story__ask-button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+
+  padding: var(--space-2);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: start;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .story__ask-button {
+    transition:
+      border-color var(--dur-fast) var(--ease-out),
+      transform var(--dur-fast) var(--ease-out);
+  }
+}
+
+.story__ask-button:hover {
+  border-color: var(--fg);
+  /* A 1px nudge toward the reader. Enough to feel like a control, small enough
+     that a column of eight of them does not ripple. */
+  transform: translateX(2px);
+}
+
+.story__ask-button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.story__ask-text {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--fg);
+}
+
+.story__ask-why {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--fg-subtle);
+}
+
+.story__ask-mark {
+  margin-block-start: var(--space-3);
+}
+
+/* ------------------------------------------------------------- skeleton -- */
+
+.skeleton {
+  background: var(--bg-inset);
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton {
+    animation: skeleton-breathe 1.6s var(--ease-in-out) infinite;
+  }
+}
+
+@keyframes skeleton-breathe {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}
+
+.skeleton--eyebrow  { inline-size: 90px;  block-size: 11px; margin-block-end: var(--space-2); }
+.skeleton--headline { inline-size: 70%;   block-size: 30px; margin-block-end: var(--space-2); }
+.skeleton--summary  { inline-size: 100%;  block-size: 56px; margin-block-end: var(--space-5); }
+.skeleton--point    { inline-size: 100%;  block-size: 78px; }
+
+.story__points-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}

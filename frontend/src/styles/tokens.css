@@ -249,6 +249,36 @@
   --sidebar-width: 232px;
   --header-height: 60px;
   --panel-width: 420px;   /* the assistant drawer */
+
+  /* ---------------------------------------------------------- provenance --
+   * The signature device of this interface.
+   *
+   * Every claim on screen carries a small mono tag saying how it was produced:
+   * a number pandas computed, a sentence a model rephrased, an inference the
+   * model made. The product's actual differentiator is that those three are
+   * never confused, so the interface marks them rather than hiding them.
+   *
+   * They are separated typographically, NOT chromatically. The obvious move is
+   * an "AI colour" -- a violet or a cyan on anything the model touched -- and
+   * it is the move every other product in this category has already made, so
+   * it would read as a genre convention rather than as a claim. A tracked mono
+   * label in the existing greys says the same thing in this app's own voice,
+   * and it keeps colour reserved for what colour means everywhere else here:
+   * something rose, something fell, something needs attention. */
+  --provenance-size: var(--text-2xs);
+  --provenance-tracking: 0.11em;
+  --provenance-fg: var(--fg-subtle);
+  --provenance-fg-ai: var(--fg-muted);
+  --provenance-rule: var(--border-strong);
+
+  /* --------------------------------------------------------------- score --
+   * The health dial. A conic gradient needs its own stop colours, and these
+   * are the one place a value maps to a hue by rule rather than by choice:
+   * the score IS the fact, so colour is carrying meaning here. */
+  --score-good: var(--success-500);
+  --score-fair: var(--warning-500);
+  --score-poor: var(--danger-500);
+  --score-track: var(--bg-inset);
 }
 
 /**
@@ -314,5 +344,10 @@
 
     --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.5);
     --shadow-md: 0 1px 3px rgb(0 0 0 / 0.4), 0 12px 32px rgb(0 0 0 / 0.55);
+
+    --provenance-fg: var(--fg-faint);
+    --provenance-fg-ai: var(--fg-subtle);
+    --provenance-rule: var(--border-strong);
+    --score-track: var(--bg-inset);
   }
 }

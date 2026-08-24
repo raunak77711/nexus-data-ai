@@ -1,0 +1,430 @@
+/**
+ * The report.
+ *
+ * This is the one surface in the app that is a DOCUMENT rather than an
+ * interface, and the typography changes accordingly: a narrower measure, real
+ * section numbering by rule rather than by decoration, and serif-like rhythm
+ * from the display face at heading sizes. It should look like something a
+ * person would attach to an email.
+ *
+ * The print stylesheet at the bottom is the actual deliverable — everything
+ * above it is the preview of that.
+ */
+
+.report {
+  max-inline-size: 780px;
+}
+
+/* ---------------------------------------------------------------- intro -- */
+
+.report__intro {
+  max-inline-size: var(--measure);
+}
+
+.report__intro-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+}
+
+.report__intro-lede {
+  margin: var(--space-2) 0 var(--space-4);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--fg-muted);
+}
+
+.report__intro-note {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--fg-subtle);
+}
+
+.report__error {
+  margin: 0 0 var(--space-2);
+  padding: var(--space-2);
+  background: var(--danger-100);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--danger-700);
+}
+
+/* ----------------------------------------------------------------- head -- */
+
+.report__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+
+  padding-block-end: var(--space-4);
+  border-block-end: 2px solid var(--fg);
+}
+
+.report__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+  color: var(--fg);
+}
+
+.report__subtitle {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+
+.report__head-actions {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+/* -------------------------------------------------------------- sections -- */
+
+.report__section {
+  margin-block-start: var(--space-5);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--border);
+}
+
+.report__section:first-of-type {
+  border-block-start: none;
+}
+
+.report__section-title {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+}
+
+.report__lede {
+  margin: 0;
+  max-inline-size: var(--measure);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--fg);
+}
+
+.report__note {
+  margin: var(--space-2) 0 0;
+  max-inline-size: var(--measure);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--fg-muted);
+}
+
+/* ----------------------------------------------------------- highlights -- */
+
+.report__highlights {
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.report__highlights li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-inline-start: var(--space-2);
+  border-inline-start: 2px solid var(--border-strong);
+}
+
+.report__highlights strong {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--fg);
+}
+
+.report__highlights span {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+
+/* ---------------------------------------------------------------- stats -- */
+
+.report__stats,
+.report__kpis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-block-end: var(--space-3);
+}
+
+.report__stat,
+.report__kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.report__stat-label,
+.report__kpi-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+.report__stat-value,
+.report__kpi-value {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+
+.report__kpi-note {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+
+/* ---------------------------------------------------------------- table -- */
+
+.report__table {
+  inline-size: 100%;
+  margin-block-start: var(--space-3);
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.report__table th,
+.report__table td {
+  padding: var(--space-05) var(--space-1);
+  text-align: start;
+  border-block-end: 1px solid var(--border);
+}
+
+.report__table thead th {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+.report__table tbody th {
+  font-weight: var(--weight-medium);
+  color: var(--fg);
+}
+
+.report__table td {
+  color: var(--fg-muted);
+}
+
+/* -------------------------------------------------------------- quality -- */
+
+.report__quality {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-block-end: var(--space-3);
+}
+
+.report__quality-grade {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--fg);
+}
+
+.report__issues {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.report__issues li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-inline-start: var(--space-2);
+  border-inline-start: 2px solid var(--border-strong);
+  font-size: var(--text-sm);
+}
+
+.report__issues li[data-severity='critical'] { border-inline-start-color: var(--danger-500); }
+.report__issues li[data-severity='warning']  { border-inline-start-color: var(--warning-500); }
+
+.report__issues strong { color: var(--fg); }
+.report__issues span   { color: var(--fg-muted); }
+
+.report__issue-why {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+
+/* ------------------------------------------------------------- findings -- */
+
+.report__findings,
+.report__recommendations {
+  margin: var(--space-2) 0 0;
+  padding-inline-start: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.report__findings h3,
+.report__recommendations h3 {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-normal);
+  color: var(--fg);
+}
+
+.report__findings p,
+.report__recommendations p {
+  margin: var(--space-05) 0 0;
+  max-inline-size: var(--measure);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--fg-muted);
+}
+
+.report__finding-why {
+  font-size: var(--text-xs) !important;
+  color: var(--fg-subtle) !important;
+}
+
+.report__anomalies {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.report__anomalies li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--text-sm);
+}
+
+.report__anomalies strong { color: var(--fg); }
+.report__anomalies span   { color: var(--fg-muted); }
+
+/* ------------------------------------------------------------- figures -- */
+
+.report__figure {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  /* Never split a chart across a page break in print. */
+  break-inside: avoid;
+}
+
+.report__figure figcaption h3 {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--fg);
+}
+
+.report__figure figcaption p {
+  margin: 2px 0 var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+
+.report__warning {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  color: var(--warning-700);
+}
+
+/* ------------------------------------------------- recommendations/foot -- */
+
+.report__disclaimer {
+  margin: 0;
+  padding: var(--space-2);
+  background: var(--warning-100);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--warning-700);
+}
+
+.report__confidence {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+
+.report__foot {
+  margin-block-start: var(--space-5);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--border);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  color: var(--fg-subtle);
+  max-inline-size: var(--measure);
+}
+
+/* ---------------------------------------------------------------- print -- */
+/*
+ * What actually gets saved as a PDF.
+ *
+ * The app shell, navigation, assistant and every button are removed — they are
+ * interface, and interface printed onto paper is noise. What remains is the
+ * document, at full page width, in black on white regardless of the theme the
+ * viewer was using, because a dark-mode PDF is a page of toner nobody wanted.
+ */
+@media print {
+  .report {
+    max-inline-size: none;
+  }
+
+  .report__head-actions,
+  .report__intro {
+    display: none;
+  }
+
+  .report__section {
+    /* Keep a heading with at least the start of its section. */
+    break-inside: auto;
+    break-before: auto;
+  }
+
+  .report__section-title {
+    break-after: avoid;
+  }
+
+  .report__figure,
+  .report__highlights li,
+  .report__findings li,
+  .report__recommendations li {
+    break-inside: avoid;
+  }
+
+  .report__foot {
+    break-before: avoid;
+  }
+}

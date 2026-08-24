@@ -1,0 +1,66 @@
+/**
+ * The provenance mark. Small, quiet, and everywhere.
+ *
+ * The design constraint that shaped this: it appears next to almost every
+ * claim in the app, so at normal reading weight it would become the loudest
+ * repeated element on the page — a stripe of labels down the left of every
+ * screen. It has to be legible when looked for and invisible when not, which
+ * is what the mono face at 11px with wide tracking and a muted foreground
+ * buys. It reads as a margin annotation rather than as a badge.
+ */
+
+.provenance {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+
+  font-family: var(--font-mono);
+  font-size: var(--provenance-size);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--provenance-tracking);
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+
+  color: var(--provenance-fg);
+  /* Cursor and title together: the label is short by necessity and the full
+     explanation lives in the tooltip, so the pointer has to say there is more. */
+  cursor: help;
+}
+
+/* The rule is the whole ornament. 16px of hairline, which at this type size
+   reads as a tick mark connecting the label to what it describes. */
+.provenance__rule {
+  inline-size: 16px;
+  block-size: 1px;
+  background: var(--provenance-rule);
+  flex: none;
+}
+
+/* AI-touched marks sit one step brighter than computed ones. A half-step, not
+   a colour change: enough that scanning a column of them shows where the model
+   has been, not enough to make the model's contributions look like the
+   headline. */
+.provenance--worded,
+.provenance--suggested {
+  color: var(--provenance-fg-ai);
+}
+
+/* The one exception to the no-colour rule. An AI suggestion is the only mark
+   that carries a warning rather than a description — it is the reader's cue
+   that this sentence is not a measurement — so its rule borrows the warning
+   tone. The text stays neutral so the label itself does not shout. */
+.provenance--suggested .provenance__rule {
+  background: var(--warning-500);
+  inline-size: 20px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .provenance {
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+}
+
+.provenance:hover {
+  color: var(--fg);
+}

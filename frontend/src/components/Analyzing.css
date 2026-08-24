@@ -1,0 +1,155 @@
+/**
+ * The analysis screen.
+ *
+ * Centred, quiet, and short. The temptation with a screen like this is to fill
+ * the wait with motion — shimmer, scanning lines, a chart drawing itself. All
+ * of it would be inventing activity to cover for activity that is already
+ * real, and the honest version is more reassuring: a list where each line
+ * completes when the work behind it completes.
+ *
+ * The only animation is on the ACTIVE line, and it is a slow pulse rather than
+ * a spin. A spinner says "waiting"; a pulse on a specific labelled task says
+ * "this is what is happening".
+ */
+
+.analyzing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 70vh;
+  padding: var(--space-6) var(--space-3);
+}
+
+.analyzing__inner {
+  inline-size: 100%;
+  max-inline-size: 480px;
+}
+
+.analyzing__eyebrow {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+  /* A long filename must not push the layout wider than the column. */
+  overflow-wrap: anywhere;
+}
+
+.analyzing__headline {
+  margin: 0 0 var(--space-5);
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+}
+
+/* --------------------------------------------------------------- stages -- */
+
+.analyzing__stages {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.analyzing__stage {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .analyzing__stage {
+    transition: opacity var(--dur-slow) var(--ease-out);
+  }
+}
+
+/* Three states, separated by opacity and weight rather than by colour. A
+   green tick on every completed line would turn a five-item list into a
+   traffic light. */
+.analyzing__stage[data-state='waiting'] {
+  opacity: 0.38;
+}
+
+.analyzing__stage[data-state='active'] {
+  opacity: 1;
+}
+
+.analyzing__stage[data-state='done'] {
+  opacity: 0.72;
+}
+
+.analyzing__marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 18px;
+  block-size: 18px;
+  /* Optical alignment with the first line of the label, which sits on a 1.6
+     leading and so has its baseline lower than a centred 18px box. */
+  margin-block-start: 2px;
+  flex: none;
+  color: var(--fg);
+}
+
+.analyzing__dot {
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: 50%;
+  background: var(--fg-faint);
+}
+
+.analyzing__stage[data-state='active'] .analyzing__dot {
+  background: var(--fg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .analyzing__stage[data-state='active'] .analyzing__dot {
+    animation: analyzing-pulse 1.4s var(--ease-in-out) infinite;
+  }
+}
+
+@keyframes analyzing-pulse {
+  0%, 100% { transform: scale(0.72); opacity: 0.45; }
+  50%      { transform: scale(1.25); opacity: 1; }
+}
+
+.analyzing__tick {
+  inline-size: 14px;
+  block-size: 14px;
+}
+
+.analyzing__label {
+  font-size: var(--text-base);
+  line-height: var(--leading-snug);
+  color: var(--fg);
+}
+
+.analyzing__stage[data-state='active'] .analyzing__label {
+  font-weight: var(--weight-medium);
+}
+
+/* ---------------------------------------------------------------- notes -- */
+
+.analyzing__error {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-2);
+  background: var(--warning-100);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--warning-700);
+}
+
+.analyzing__note {
+  margin: var(--space-5) 0 0;
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--border);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  color: var(--fg-subtle);
+}

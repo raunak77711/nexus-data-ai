@@ -1,4 +1,4 @@
-"""HTTP layer for AI Data Worlds.
+"""HTTP layer for NEXUS Data AI.
 
 This package is the *only* place that knows about HTTP. Everything it serves is
 computed by core/, which has no web-framework imports at all. That split is why

@@ -25,13 +25,18 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from backend import __version__
 from backend.routers import (
+    analysis,
     assistant,
     chart,
     chat,
+    datasets,
+    explain,
     forecast,
     health,
     insights,
     preview,
+    quality,
+    report,
     route,
     samples,
     simulate,
@@ -85,13 +90,18 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origin_regex=ALLOWED_ORIGIN_REGEX,
         allow_credentials=True,
-        allow_methods=["GET", "POST", "OPTIONS"],
+        # DELETE is here for /api/datasets/{sid}. It is enumerated rather than
+        # widened to "*" for the same reason the origin is a regex rather than a
+        # wildcard: the list should say what this API actually does.
+        allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
 
     for module in (
         health, upload, samples, route, world, forecast, chat, assistant,
         insights, chart, simulate, preview,
+        # The autonomous-analysis half of the product.
+        analysis, quality, explain, datasets, report,
     ):
         app.include_router(module.router, prefix=API_PREFIX)
 

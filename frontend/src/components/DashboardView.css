@@ -1,0 +1,105 @@
+/**
+ * The dashboard.
+ *
+ * The KPI row is the one place in the app where a big number is allowed to be
+ * big. It earns it here because these ARE the headline facts, and because the
+ * row is four items on one line rather than four cards competing for a screen.
+ * The display face at --text-3xl with tabular figures is doing the work; the
+ * cards themselves are just a border.
+ */
+
+.dash {
+  max-inline-size: var(--content-max);
+}
+
+/* ------------------------------------------------------------------ kpis -- */
+
+.dash__kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--space-1);
+  margin-block-end: var(--space-4);
+}
+
+.kpi {
+  padding: var(--space-3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  min-inline-size: 0;
+}
+
+.kpi__label {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+  /* A long generated label ("Average years experience") must wrap rather than
+     force the grid column wider. */
+  overflow-wrap: anywhere;
+}
+
+.kpi__value {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: 1;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.kpi__note {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  color: var(--fg-subtle);
+}
+
+@media (max-width: 600px) {
+  .kpi__value {
+    font-size: var(--text-2xl);
+  }
+}
+
+/* ----------------------------------------------------------------- grid -- */
+
+.dash__note {
+  margin: 0 0 var(--space-3);
+  max-inline-size: var(--measure);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--fg-muted);
+}
+
+.dash__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: var(--space-2);
+}
+
+/* Below the point where two columns would each be narrower than a legible
+   chart, collapse to one. minmax already handles most of this; the explicit
+   single column stops a 400px viewport from getting a 380px panel plus
+   horizontal overflow. */
+@media (max-width: 780px) {
+  .dash__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dash__empty {
+  max-inline-size: var(--measure);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--fg-muted);
+}
+
+/* ------------------------------------------------------------- skeleton -- */
+
+.skeleton--kpi   { block-size: 104px; border-radius: var(--radius-md); }
+.skeleton--panel { block-size: 320px; margin-block-end: var(--space-2); border-radius: var(--radius-lg); }

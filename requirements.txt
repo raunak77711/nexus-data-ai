@@ -21,10 +21,14 @@ numpy==2.5.2
 scikit-learn==1.9.0
 python-dotenv==1.2.3
 
-# LLM routing. google-genai is Google's supported client SDK; it replaces
-# google-generativeai, which is end-of-life upstream and prints a FutureWarning
-# on import. httpx arrives as a google-genai dependency but is named in
-# router.py's except clause, so it is listed here as the direct dependency it
-# effectively is.
-google-genai==2.19.0
+# LLM access, all of it behind core/llm.py.
+#
+# httpx is the DEFAULT provider's entire client. DeepSeek speaks the
+# OpenAI-compatible chat-completions protocol, which is one POST with four
+# fields, so the `openai` package would be a dependency bought for nothing.
 httpx==0.28.1
+
+# google-genai is only needed for AI_PROVIDER=gemini. core/llm.py imports it
+# defensively and reports the absence rather than raising, so a DeepSeek-only
+# deployment can drop this line and the app still starts.
+google-genai==2.19.0

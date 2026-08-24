@@ -1,0 +1,72 @@
+/**
+ * The score ring.
+ *
+ * Rotated -90deg so the arc starts at twelve o'clock, which is where a reader
+ * expects a gauge to begin. Without that it starts at three o'clock and a low
+ * score looks like it is sitting in the wrong place.
+ */
+
+.dial {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.dial__svg {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  transform: rotate(-90deg);
+}
+
+.dial__track,
+.dial__value {
+  fill: none;
+  stroke-width: 3.5;
+}
+
+.dial__track {
+  stroke: var(--score-track);
+}
+
+.dial__value {
+  stroke-linecap: round;
+  /* Set per band below. Declared here so the property exists even if a band
+     attribute is somehow missing, rather than the arc rendering invisible. */
+  stroke: var(--fg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dial__value {
+    /* The arc draws itself in once. It is the only moment in the app where a
+       number's arrival is dramatised, and it earns it: this is the answer to
+       "is my data any good", which is the question people are most anxious
+       about and most relieved to have answered. */
+    animation: dial-draw 800ms var(--ease-out) both;
+    transition: stroke-dashoffset var(--dur-slow) var(--ease-out);
+  }
+}
+
+@keyframes dial-draw {
+  from { stroke-dashoffset: 125.6; } /* full circumference: nothing drawn */
+}
+
+.dial[data-band='good'] .dial__value { stroke: var(--score-good); }
+.dial[data-band='fair'] .dial__value { stroke: var(--score-fair); }
+.dial[data-band='poor'] .dial__value { stroke: var(--score-poor); }
+
+.dial__number {
+  position: relative;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  /* Tabular so 87 and 100 occupy the same width and the ring does not appear
+     to shift when the score changes after a clean. */
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+  line-height: 1;
+}

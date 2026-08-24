@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 # with `in` before any value from a spec is used -- including the aggregation,
 # which is spliced into the template as a method name and would otherwise be
 # the one place a spec could reach into code position.
-CHART_TYPES = ("line", "bar", "scatter", "histogram", "box", "map")
+CHART_TYPES = ("line", "bar", "scatter", "histogram", "box", "map", "heatmap")
 AGGREGATIONS = ("sum", "mean", "median", "count", "min", "max")
 
 FREQ_ALIASES = {"D": "D", "W": "W", "M": "ME"}
@@ -53,6 +53,10 @@ FREQ_LABELS = {"D": "daily", "W": "weekly", "M": "monthly"}
 MAX_BARS = 20
 DEFAULT_BARS = 12
 HISTOGRAM_BINS = 30
+# A correlation grid past roughly this many columns becomes a texture rather
+# than a readable matrix, and the labels stop fitting on the axes.
+MAX_HEATMAP_COLUMNS = 12
+MIN_HEATMAP_COLUMNS = 2
 # Scatter plots of very large frames produce a solid block of ink and a payload
 # to match. Sampling is disclosed in the returned warnings, never silently.
 MAX_SCATTER_POINTS = 4000
@@ -168,6 +172,41 @@ fig = px.scatter_map(
     size_max=18, zoom=$zoom, map_style="carto-positron", title=$title,
 )
 """
+
+
+HEATMAP_TEMPLATE = """
+import pandas as pd
+import plotly.graph_objects as go
+
+data = df[$columns].apply(pd.to_numeric, errors="coerce")
+matrix = data.corr(numeric_only=True).round(2)
+
+fig = go.Figure(
+    go.Heatmap(
+        z=matrix.values,
+        x=list(matrix.columns),
+        y=list(matrix.index),
+        zmin=-1,
+        zmax=1,
+        colorscale=$colorscale,
+        text=matrix.values,
+        texttemplate="%{text:.2f}",
+        hovertemplate="%{y} vs %{x}<br>correlation %{z:.2f}<extra></extra>",
+    )
+)
+fig.update_layout(title=$title)
+fig.update_yaxes(autorange="reversed")
+"""
+
+# A diverging scale, because a correlation matrix has a meaningful midpoint at
+# zero: -0.8 and +0.8 are equally strong and opposite in direction, and a
+# sequential ramp would render one of them as "nearly nothing". Neutral in the
+# middle so that "no relationship" reads as absence rather than as a colour.
+HEATMAP_COLORSCALE = [
+    [0.0, "#8c4a45"],
+    [0.5, "#efefF2"],
+    [1.0, "#1f4d5c"],
+]
 
 
 # -------------------------------------------------------------- validation --
@@ -309,6 +348,40 @@ def normalise(spec: Dict[str, Any], df: pd.DataFrame) -> Dict[str, Any]:
             df, _require_column(df, spec.get("y"), "the value axis"), "a value"
         )
 
+    elif kind == "heatmap":
+        # The only spec that takes a LIST of columns. Callers may omit it
+        # entirely, in which case every numeric column in the frame is used --
+        # "show me the correlations" is a question about the whole dataset, and
+        # making the user enumerate its columns to ask it would defeat the point.
+        raw = spec.get("columns")
+        if isinstance(raw, str):
+            raw = [raw]
+        if not raw:
+            candidates = [
+                name
+                for name in _column_names(df)
+                if pd.api.types.is_numeric_dtype(df[name])
+            ]
+        else:
+            candidates = [_require_column(df, name, "a column") for name in raw]
+
+        # Constant columns are dropped rather than rejected: their correlation
+        # with everything is undefined, and a matrix with a stripe of NaN
+        # through it looks like a bug in the app rather than a fact about a
+        # column that never changes.
+        columns: List[str] = []
+        for name in candidates:
+            values = pd.to_numeric(df[name], errors="coerce")
+            if values.notna().sum() >= 2 and values.std(skipna=True) > 0:
+                columns.append(name)
+
+        if len(columns) < MIN_HEATMAP_COLUMNS:
+            raise ChartError(
+                "A correlation grid needs at least two numeric columns that "
+                "actually vary. This data does not have them."
+            )
+        clean["columns"] = columns[:MAX_HEATMAP_COLUMNS]
+
     else:  # map -- the only remaining member of CHART_TYPES
         clean["lat"] = _require_numeric(
             df, _require_column(df, spec.get("lat"), "latitude"), "latitude"
@@ -404,6 +477,24 @@ def build_chart(df: pd.DataFrame, spec: Dict[str, Any]) -> Dict[str, Any]:
         title = clean["title"] or f"{clean['y']} by {clean['x']}"
         code = _glassbox.render(
             BOX_TEMPLATE, x=clean["x"], y=clean["y"], limit=clean["limit"], title=title
+        )
+
+    elif kind == "heatmap":
+        title = clean["title"] or "How the numbers move together"
+        n_dropped = len(
+            [c for c in _column_names(df) if pd.api.types.is_numeric_dtype(df[c])]
+        ) - len(clean["columns"])
+        if n_dropped > 0:
+            warnings.append(
+                f"{n_dropped} numeric column(s) are not shown: a column has to "
+                f"vary to correlate with anything, and these do not, or the grid "
+                f"was capped at {MAX_HEATMAP_COLUMNS} columns for legibility."
+            )
+        code = _glassbox.render(
+            HEATMAP_TEMPLATE,
+            columns=clean["columns"],
+            colorscale=HEATMAP_COLORSCALE,
+            title=title,
         )
 
     else:  # map

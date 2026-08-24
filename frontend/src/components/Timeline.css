@@ -1,0 +1,97 @@
+/**
+ * The work log.
+ *
+ * Collapsed by default and set in the mono face throughout, because it is a
+ * log: a record of what the machine did, not prose written for a reader. That
+ * framing is what keeps it from competing with the analysis above it.
+ */
+
+.timeline {
+  margin: var(--space-5) var(--space-4) var(--space-4);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--border);
+}
+
+.timeline__toggle {
+  padding: var(--space-05) var(--space-1);
+  margin-inline-start: calc(var(--space-1) * -1);
+
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+  cursor: pointer;
+}
+
+.timeline__toggle:hover {
+  color: var(--fg);
+  border-color: var(--border);
+}
+
+.timeline__toggle:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.timeline__list {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.timeline__event {
+  display: grid;
+  /* Three fixed-ish columns so the timestamps and stage names form clean
+     vertical rules down the log, which is what makes a list of times scannable
+     rather than a paragraph of them. */
+  grid-template-columns: 78px 120px 1fr;
+  gap: var(--space-2);
+  padding-block: 5px;
+
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  line-height: var(--leading-snug);
+}
+
+.timeline__event + .timeline__event {
+  border-block-start: 1px solid var(--border);
+}
+
+.timeline__time {
+  color: var(--fg-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline__stage {
+  color: var(--fg-subtle);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+.timeline__message {
+  color: var(--fg-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+}
+
+@media (max-width: 700px) {
+  .timeline__event {
+    grid-template-columns: 66px 1fr;
+  }
+  .timeline__stage {
+    display: none;
+  }
+}
+
+@media print {
+  .timeline {
+    display: none;
+  }
+}

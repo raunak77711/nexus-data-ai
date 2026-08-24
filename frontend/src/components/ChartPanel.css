@@ -1,0 +1,188 @@
+/**
+ * The chart panel.
+ *
+ * Separation is a 1px border and generous internal space, not a shadow — the
+ * app's standing rule (see tokens.css). What is specific to this component is
+ * the vertical rhythm: question, chart, reason, controls. Each of those is a
+ * different kind of thing and the gaps between them differ accordingly, so the
+ * eye groups the chart with its question rather than with the button below it.
+ */
+
+.panel {
+  margin: 0;
+  padding: var(--space-3);
+
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+
+  /* Contains the plotly canvas, which will otherwise push the grid wider than
+     its column on a narrow viewport. */
+  min-inline-size: 0;
+}
+
+.panel--wide {
+  grid-column: 1 / -1;
+}
+
+/* ----------------------------------------------------------------- head -- */
+
+.panel__head {
+  /* figcaption is display:block but sits after the figure in source order for
+     accessibility; order here puts it visually on top without moving it. */
+  margin-block-end: var(--space-3);
+}
+
+.panel__question {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+  /* Questions are sentences and wrap; a tighter leading than body copy keeps a
+     two-line heading reading as one unit. */
+  line-height: var(--leading-snug);
+  text-wrap: balance;
+}
+
+.panel__title {
+  margin: var(--space-05) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+/* --------------------------------------------------------------- figure -- */
+
+.panel__figure {
+  /* The plotly container measures itself against this box, so it needs a
+     definite inline size to respond to. */
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+/* ------------------------------------------------------------- why/warn -- */
+
+.panel__why {
+  margin: var(--space-3) 0 0;
+  padding-inline-start: var(--space-2);
+  border-inline-start: 2px solid var(--border-strong);
+
+  max-inline-size: var(--measure);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--fg-muted);
+}
+
+/* The rule on the left marks this as commentary rather than content — the same
+   device a margin note uses in print, which is exactly what this is. */
+
+.panel__warnings {
+  margin: var(--space-2) 0 0;
+  padding-inline-start: var(--space-3);
+
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  color: var(--warning-700);
+}
+
+.panel__warnings li + li {
+  margin-block-start: var(--space-05);
+}
+
+/* ----------------------------------------------------------------- foot -- */
+
+.panel__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-block-start: var(--space-1);
+}
+
+.panel__code-toggle {
+  padding: var(--space-05) var(--space-1);
+  margin-block-start: var(--space-2);
+
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .panel__code-toggle {
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out);
+  }
+}
+
+.panel__code-toggle:hover {
+  color: var(--fg);
+  border-color: var(--border);
+}
+
+.panel__code-toggle:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* ----------------------------------------------------------------- code -- */
+
+.panel__code {
+  margin-block-start: var(--space-2);
+}
+
+.panel__code-note {
+  margin: 0 0 var(--space-2);
+  max-inline-size: var(--measure);
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+
+.panel__code-note code {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  padding: 0 3px;
+  background: var(--bg-inset);
+  border-radius: 3px;
+}
+
+.panel__code pre {
+  margin: 0 0 var(--space-2);
+  padding: var(--space-2);
+  overflow-x: auto;
+
+  background: var(--bg-code);
+  border-radius: var(--radius-md);
+
+  /* Code is dark in both themes — see base.css. The foreground is set here
+     rather than inherited because the surrounding page inverts and this does
+     not. */
+  color: #e6e6ea;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.65;
+  tab-size: 4;
+}
+
+/* ----------------------------------------------------------- responsive -- */
+
+@media (max-width: 600px) {
+  .panel {
+    padding: var(--space-2);
+  }
+
+  .panel__question {
+    font-size: var(--text-base);
+  }
+}

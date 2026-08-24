@@ -1,242 +1,34 @@
 /**
- * Application shell: header, page grid, sidebar, footer.
+ * The application shell.
  *
- * The layout is two columns above 1080px and one below. The sidebar is on the
- * right and holds reference material (the column profile, the swap-file zone);
- * the left column holds the thing the user came for. On a narrow screen the
- * sidebar drops BELOW the world rather than above it, because the world is the
- * answer and reference material should never push it off the first screen.
+ * There is one, and it is a single full-height region. The sidebar this file
+ * used to lay out is gone with the four-view dashboard it navigated: every
+ * screen now centres its own narrow column, so the shell's whole job is to
+ * paint the page and give focus somewhere to land.
+ *
+ * The per-screen widths live in Home.css and Ready.css rather than here, and
+ * are deliberately identical — the upload box and the confirmation that
+ * replaces it sit in the same band of the screen, which is what makes the
+ * transition read as one page progressing rather than as a new app opening.
  */
 
-.app-header {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  height: var(--header-height);
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
-  backdrop-filter: saturate(140%) blur(10px);
-  border-bottom: 1px solid var(--border);
+.app-shell {
+  min-height: 100dvh;
+  background: var(--bg);
 }
 
-.app-header-inner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  height: 100%;
-  max-width: var(--content-max);
+.app-shell:focus-visible {
+  /* An inset ring, because an outset one on a full-height region draws a box
+   * around the entire screen. */
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -3px;
+}
+
+.offline-banner {
+  max-width: 620px;
   margin: 0 auto;
-  padding: 0 var(--space-3);
+  padding: var(--space-2) var(--space-3) 0;
 }
 
-/* ------------------------------------------------------------------- brand */
-.brand {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--fg);
-  text-decoration: none;
-}
-
-.brand-mark {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: var(--radius-md);
-  background: var(--accent);
-  color: #fff;
-  box-shadow: var(--shadow-sm);
-  transition: transform var(--dur-normal) var(--ease-spring);
-}
-
-.brand-mark svg {
-  width: 18px;
-  height: 18px;
-}
-
-.brand:hover .brand-mark {
-  transform: rotate(-12deg) scale(1.05);
-}
-
-.brand-text {
-  font-family: var(--font-display);
-  font-size: var(--text-base);
-  font-weight: var(--weight-medium);
-  letter-spacing: var(--tracking-tight);
-}
-
-.brand-text strong {
-  font-weight: var(--weight-bold);
-}
-
-.app-header-right {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-/* ------------------------------------------------------------------ health --
- * A live indicator, not decoration: if the API is down this is the only thing
- * on the page that says so before the user tries to upload. */
-.health {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-05);
-  padding: var(--space-05) var(--space-1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  background: var(--bg-elevated);
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-medium);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--fg-subtle);
-  white-space: nowrap;
-}
-
-.health-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: var(--radius-pill);
-  background: var(--fg-subtle);
-}
-
-.health[data-state='up'] { color: var(--success-700); border-color: color-mix(in srgb, var(--success-500) 35%, transparent); }
-.health[data-state='up'] .health-dot { background: var(--success-500); }
-.health[data-state='down'] { color: var(--danger-700); border-color: var(--danger-500); background: var(--danger-100); }
-.health[data-state='down'] .health-dot { background: var(--danger-500); }
-.health[data-state='checking'] .health-dot { animation: routing-pulse 1.4s var(--ease-in-out) infinite; }
-
-/* -------------------------------------------------------------------- main */
-.app-main {
-  max-width: var(--content-max);
-  margin: 0 auto;
-  padding: var(--space-3);
-  min-height: calc(100vh - var(--header-height) - 72px);
-}
-
-.app-offline {
-  margin-bottom: var(--space-3);
-}
-
-.app-offline code {
-  padding: 1px 4px;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--fg) 8%, transparent);
-}
-
-.empty-upload {
-  max-width: 560px;
-  margin-top: var(--space-4);
-}
-
-/* --------------------------------------------------------------- workspace */
-.workspace {
-  display: grid;
-  gap: var(--space-3);
-}
-
-.workspace-body {
-  display: grid;
-  gap: var(--space-3);
-  align-items: start;
-}
-
-.workspace-main {
-  display: grid;
-  gap: var(--space-3);
-  min-width: 0; /* lets charts shrink instead of forcing the grid wider */
-}
-
-.workspace-side {
-  display: grid;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.side-panel {
-  padding: var(--space-2);
-  min-width: 0;
-}
-
-.side-panel .section-title {
-  margin-bottom: var(--space-1);
-}
-
-.side-panel h2 {
-  font-size: var(--text-base);
-}
-
-.side-panel-heading {
-  margin-bottom: var(--space-1);
-  font-size: var(--text-base);
-}
-
-/* The sidebar's column table gets its own scroll once it is longer than the
- * viewport, so a 40-column dataset does not make the page endless. */
-.workspace-side .profile-scroll {
-  max-height: 420px;
-  overflow-y: auto;
-}
-
-/* A smaller drop zone in the sidebar: it is a secondary action there, and a
- * full-size target would compete with the world for attention. */
-.upload-compact .upload-zone {
-  padding: var(--space-2);
-}
-
-.upload-compact .upload-icon {
-  width: 34px;
-  height: 34px;
-}
-
-.upload-compact .upload-headline {
-  font-size: var(--text-sm);
-}
-
-/* ----------------------------------------------------------------- footer */
-.app-footer {
-  max-width: var(--content-max);
-  margin: 0 auto;
-  padding: var(--space-4) var(--space-3);
-  border-top: 1px solid var(--border);
-  font-size: var(--text-xs);
-  color: var(--fg-subtle);
-}
-
-/* ------------------------------------------------------------- breakpoints */
-
-/* Tablet and up: the stats strip and the header get more room, but the layout
- * stays single column -- two columns at this width would make the charts too
- * narrow to read their own axis labels. */
-@media (min-width: 720px) {
-  .app-main {
-    padding: var(--space-4) var(--space-3);
-  }
-}
-
-/* Desktop: the reference sidebar appears. 1080px is where a 380px sidebar
- * leaves the main column wide enough for a two-up figure grid. */
-@media (min-width: 1080px) {
-  .workspace-body {
-    grid-template-columns: minmax(0, 1fr) var(--sidebar-width);
-  }
-
-  .workspace-side {
-    position: sticky;
-    top: calc(var(--header-height) + var(--space-3));
-    max-height: calc(100vh - var(--header-height) - var(--space-6));
-    overflow-y: auto;
-    /* Room for the scrollbar so the sticky column does not jitter as content
-     * crosses the overflow threshold. */
-    padding-right: 2px;
-  }
-}
-
-@media (max-width: 520px) {
-  .app-header-inner { padding: 0 var(--space-2); }
-  .app-main { padding: var(--space-2); }
-  .brand-text { font-size: var(--text-sm); }
-  .health { display: none; } /* the offline banner still covers the failure case */
-}
+/* `fade-in` is used by both screens' entry animation and is defined in
+ * base.css alongside the other shared keyframes. */

@@ -1,4 +1,4 @@
-"""Streamlit shell for AI Data Worlds.
+"""Streamlit shell for NEXUS Data AI.
 
 This file renders; it does not decide. Every judgement -- what a column means,
 which world to build, what to plot, whether a forecast is trustworthy -- is made
@@ -27,7 +27,7 @@ from core.profiler import profile_dataframe
 from core.worlds import geo, tabular, timeseries
 
 st.set_page_config(
-    page_title="AI Data Worlds",
+    page_title="NEXUS Data AI",
     page_icon=":material/travel_explore:",
     layout="wide",
 )
@@ -145,7 +145,7 @@ def show_world(world: Dict[str, Any]) -> None:
 
 # ----------------------------------------------------------------- the page --
 
-st.title("AI data worlds")
+st.title("NEXUS Data AI")
 st.markdown(
     "Upload a CSV. The app profiles the columns, asks a model which kind of "
     "world the data describes, and builds it -- **and shows you the code behind "

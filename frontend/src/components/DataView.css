@@ -1,0 +1,234 @@
+/**
+ * The data screen.
+ *
+ * Two tables, and the only real design problem here is horizontal overflow: a
+ * 40-column CSV cannot be made to fit and must not be allowed to widen the
+ * page. Both tables live in their own `overflow-x: auto` container, so the
+ * table scrolls and the document does not — which is the rule the whole app
+ * follows for wide content.
+ */
+
+.data {
+  max-inline-size: var(--content-max);
+}
+
+/* ----------------------------------------------------------------- head -- */
+
+.data__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+}
+
+.data__lede {
+  margin: var(--space-2) 0 0;
+  max-inline-size: var(--measure);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--fg-muted);
+}
+
+.data__downloads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block-start: var(--space-3);
+}
+
+.data__download {
+  padding: var(--space-1) var(--space-2);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--fg);
+  text-decoration: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .data__download {
+    transition:
+      border-color var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out);
+  }
+}
+
+.data__download:hover {
+  border-color: var(--fg);
+  background: var(--bg-inset);
+}
+
+.data__download:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* -------------------------------------------------------------- sections -- */
+
+.data__section {
+  margin-block-start: var(--space-6);
+}
+
+.data__section-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+}
+
+.data__section-note {
+  margin: var(--space-1) 0 var(--space-3);
+  max-inline-size: var(--measure);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--fg-muted);
+}
+
+.data__loading,
+.data__error {
+  font-size: var(--text-sm);
+  color: var(--fg-subtle);
+}
+
+.data__error {
+  color: var(--danger-700);
+}
+
+/* ---------------------------------------------------------------- table -- */
+
+.data__scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  /* Momentum scrolling on touch, and a scrollbar that follows the theme. */
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.table th,
+.table td {
+  padding: var(--space-1) var(--space-2);
+  text-align: start;
+  border-block-end: 1px solid var(--border);
+}
+
+.table thead th {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+
+  background: var(--bg-inset);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+/* Sticky headers need an opaque background AND a bottom border that travels
+   with them; a border-block-end on a sticky cell is painted, unlike a
+   border-collapse border on a sticky row, which is not. */
+.table thead th::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: 1px;
+  background: var(--border-strong);
+}
+
+.table tbody tr:last-child th,
+.table tbody tr:last-child td {
+  border-block-end: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .table tbody tr {
+    transition: background-color var(--dur-instant) var(--ease-out);
+  }
+}
+
+.table tbody tr:hover {
+  background: var(--bg-inset);
+}
+
+.table__name {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--fg);
+}
+
+.table__mono {
+  font-family: var(--font-mono);
+  color: var(--fg-subtle);
+}
+
+.table__num {
+  text-align: end;
+  color: var(--fg-muted);
+}
+
+.table__rownum {
+  font-family: var(--font-mono);
+  color: var(--fg-faint);
+  text-align: end;
+}
+
+.table__empty {
+  color: var(--fg-faint);
+  cursor: help;
+}
+
+.table--dense th,
+.table--dense td {
+  padding: 5px var(--space-1);
+  /* A wide cell is truncated rather than allowed to set the column width, so
+     one long free-text value cannot push every other column off screen. */
+  max-inline-size: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ----------------------------------------------------------------- type -- */
+/* Separated by weight and border, not by hue. Six colours for six types was
+   the loudest thing on the old version of this table, and the badge already
+   says its type in words — which is the accessible way to say it anyway. */
+
+.type {
+  display: inline-block;
+  padding: 1px var(--space-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-2xs);
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+/* A measurement is what most of this app is about, so it alone gets emphasis —
+   one step, in ink rather than colour. */
+.type[data-type='numeric'] {
+  border-color: var(--border-strong);
+  font-weight: var(--weight-medium);
+  color: var(--fg);
+}
+
+.type[data-type='text'] {
+  border-style: dashed;
+  color: var(--fg-subtle);
+}

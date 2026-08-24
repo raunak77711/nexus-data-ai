@@ -434,3 +434,28 @@ button {
 .rise-in {
   animation: rise-in var(--dur-slow) var(--ease-out) both;
 }
+
+/**
+ * Visually hidden, still announced.
+ *
+ * Used where a control's visible label is an icon or a checkbox and the
+ * accessible name has to be a real string — the health screen's per-issue
+ * checkboxes, the assistant's textarea label. `display: none` and
+ * `visibility: hidden` would remove it from the accessibility tree too, which
+ * is the opposite of what is wanted; clipping a 1px box keeps it in the tree
+ * and off the screen.
+ *
+ * white-space: nowrap stops a long label collapsing into a 1px-wide column and
+ * being announced one character per line by some screen readers.
+ */
+.sr-only {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

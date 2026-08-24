@@ -20,7 +20,19 @@ services:
     environment:
       # Passed through from the host's shell or .env file rather than written
       # here. A key in a committed compose file is a leaked key.
+      #
+      # Both providers' keys are listed and both may be empty: core/llm.py
+      # reads only the one AI_PROVIDER selects, and an app with no key at all
+      # is a supported deployment that runs on its rule-based paths.
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      # Provider, endpoint and model, so a retired model id or a switched
+      # provider is a change to .env rather than a rebuild. All default to
+      # what core/llm.py uses.
+      AI_PROVIDER: ${AI_PROVIDER:-deepseek}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-}
+      NEXUS_AI_MODEL: ${NEXUS_AI_MODEL:-}
       # Unbuffered so uvicorn's logs appear in `docker compose logs` as they
       # happen instead of arriving in blocks when the buffer flushes.
       PYTHONUNBUFFERED: "1"
@@ -40,6 +52,13 @@ services:
       # the container regenerates it on start if it is empty. The generator is
       # seeded, so the files are byte-identical to the host's.
       - ./samples:/app/samples
+      # The dataset store: uploaded bytes plus an index, which is what makes
+      # "My datasets" survive a restart. A NAMED volume rather than a bind
+      # mount -- the contents are the users' uploads, not source, and binding
+      # them into the repo would put other people's files in a directory that
+      # gets committed from. Named means `docker compose down` keeps them and
+      # `down -v` is the deliberate way to discard them.
+      - nexus-store:/app/.nexus_store
     command: >
       sh -c "python scripts/make_samples.py &&
              uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload"
@@ -87,3 +106,8 @@ services:
         # the frontend's first /api/health call does not race the backend's boot
         # and paint an "API offline" banner on a working system.
         condition: service_healthy
+
+volumes:
+  # Named, so the datasets people upload outlive the containers that served
+  # them. Removed only by `docker compose down -v`.
+  nexus-store:

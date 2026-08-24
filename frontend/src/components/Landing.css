@@ -1,223 +1,527 @@
 /**
- * The landing screen.
+ * The home page.
  *
- * Everything here is in service of one measurement: how long it takes someone
- * who has never seen this page to know what it does. So there is one headline,
- * one sentence, two actions and a drop zone, in that order, with nothing
- * between them that has to be read.
+ * The whole page is one column, centred, with a hard ceiling on measure. That
+ * is the layout decision and it is the aesthetic risk: an analytics product's
+ * home page is conventionally wide, gridded and busy with proof. This one is a
+ * document. The argument is that the visitor arriving here is holding a file
+ * they do not understand and is slightly intimidated; a dense page of
+ * capability tiles confirms the fear, and a single readable column does not.
+ *
+ * Everything else follows from that: generous vertical space between sections,
+ * one accent-weight element per screenful, and no card that exists only to put
+ * a border around a sentence.
  */
 
 .landing {
-  max-width: var(--content-max);
-  margin: 0 auto;
-  padding: var(--space-7) var(--space-4) var(--space-8);
+  max-inline-size: 720px;
+  margin-inline: auto;
+  padding: var(--space-8) var(--space-3) var(--space-7);
 }
 
-/* ---------------------------------------------------------------- the hero */
-
-.hero {
-  /* Left-aligned, not centred. A centred hero with two buttons under it is the
-   * default shape of every generated landing page; ranging the type left also
-   * gives the headline a hard edge to sit against, which suits a product that
-   * is about precision.
-   *
-   * The width is set on the CHILDREN rather than here: the headline wants a
-   * narrow measure so it breaks where it was written to break, and the lead
-   * wants a wider one so it does not stack into six short lines. */
-  padding-block: var(--space-6) var(--space-7);
+@media (max-width: 720px) {
+  .landing {
+    padding-block-start: var(--space-6);
+  }
 }
 
-.hero-mark {
-  margin-bottom: var(--space-4);
+/* ----------------------------------------------------------------- hero -- */
+
+.landing__eyebrow {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+.landing__headline {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-4xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  line-height: 1.02;
   color: var(--fg);
 }
 
-.hero-title {
-  font-size: var(--text-4xl);
-  font-weight: var(--weight-semibold);
-  line-height: 1.02;
-  letter-spacing: var(--tracking-tight);
-  /* The two lines are set by an explicit <br>, so `balance` must not re-wrap
-   * them into something else at an intermediate width. */
-  text-wrap: nowrap;
-}
+/* The line break in the markup is deliberate and the balance is off on
+   purpose: "without knowing how" is the surprising half of the sentence and it
+   gets its own line so it reads as a second beat rather than a subordinate
+   clause. */
 
-.hero-lead {
-  max-width: 56ch;
-  margin-top: var(--space-3);
+.landing__lede {
+  margin: var(--space-3) 0 0;
+  max-inline-size: 52ch;
   font-size: var(--text-lg);
   line-height: var(--leading-snug);
-  letter-spacing: var(--tracking-normal);
   color: var(--fg-muted);
 }
 
-.hero-actions {
+@media (max-width: 600px) {
+  .landing__lede {
+    font-size: var(--text-base);
+  }
+}
+
+.landing__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
-  margin-top: var(--space-5);
-}
-
-.hero-cta {
-  padding: 0.7rem var(--space-3);
-  text-decoration: none;
-}
-
-/* ------------------------------------------------------------- the upload */
-
-.landing-upload {
-  /* scroll-margin so the "Upload dataset" anchor lands with the zone framed
-   * rather than jammed against the top of the viewport. */
-  scroll-margin-top: var(--space-6);
-  padding-bottom: var(--space-7);
-}
-
-/* --------------------------------------------------------------- samples */
-
-.samples {
-  scroll-margin-top: var(--space-6);
-  border-top: 1px solid var(--border);
-  padding-top: var(--space-6);
-}
-
-.samples-head {
-  margin-bottom: var(--space-4);
-}
-
-.samples-title {
-  margin-top: var(--space-2);
-  font-size: var(--text-xl);
-  letter-spacing: var(--tracking-tight);
-}
-
-.sample-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  align-items: stretch;
   gap: var(--space-2);
-  list-style: none;
+  margin-block-start: var(--space-5);
 }
 
-.sample-card {
+/* -------------------------------------------------------------- dropzone -- */
+
+.dropzone {
+  position: relative;
+  flex: 1 1 320px;
+  min-inline-size: 0;
+}
+
+.dropzone__input {
+  /* Visually hidden but still focusable and still the real control, so the
+     label below is a genuine label rather than a div pretending to be a
+     button. Keyboard and screen-reader behaviour come free. */
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.dropzone__input:disabled {
+  cursor: not-allowed;
+}
+
+.dropzone__label {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
-  width: 100%;
-  height: 100%;
-  min-height: 180px;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-05);
+
+  min-block-size: 92px;
   padding: var(--space-3);
-  text-align: left;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
+
+  background: var(--accent);
+  border: 1px solid var(--accent);
   border-radius: var(--radius-lg);
-  color: inherit;
-  transition:
-    border-color var(--dur-fast) var(--ease-out),
-    background-color var(--dur-fast) var(--ease-out),
-    transform var(--dur-fast) var(--ease-out);
+  cursor: pointer;
+  text-align: center;
 }
 
-.sample-card:hover:not(:disabled) {
-  border-color: var(--fg-faint);
-  /* 2px, once. A card that lifts further than this starts to feel like a toy,
-   * and the hover has to survive being repeated across three cards in a row. */
-  transform: translateY(-2px);
+@media (prefers-reduced-motion: no-preference) {
+  .dropzone__label {
+    transition:
+      transform var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out);
+  }
 }
 
-.sample-card:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-.sample-card[data-loading='yes'] {
-  opacity: 1;
-  border-color: var(--fg-faint);
-}
-
-.sample-shows {
-  color: var(--fg-faint);
-}
-
-.sample-name {
+.dropzone__primary {
   font-family: var(--font-display);
   font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-tight);
+  color: var(--accent-fg);
 }
 
-.sample-blurb {
+.dropzone__secondary {
   font-size: var(--text-sm);
-  line-height: var(--leading-snug);
+  /* The inverted surface needs its own muted step; --fg-muted is tuned for the
+     page background and disappears here. */
+  color: color-mix(in oklab, var(--accent-fg) 62%, var(--accent));
+}
+
+.dropzone:hover .dropzone__label,
+.dropzone__input:focus-visible + .dropzone__label {
+  background: var(--accent-hover);
+}
+
+.dropzone__input:focus-visible + .dropzone__label {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+/* The drop state inverts back to the page, so the zone reads as an opening
+   rather than a solid block the file would bounce off. */
+.dropzone--over .dropzone__label {
+  background: var(--bg-inset);
+  border-style: dashed;
+  border-color: var(--fg);
+}
+
+.dropzone--over .dropzone__primary {
+  color: var(--fg);
+}
+
+.dropzone--over .dropzone__secondary {
   color: var(--fg-muted);
 }
 
-.sample-foot {
+.dropzone--disabled .dropzone__label {
+  background: var(--bg-inset);
+  border-color: var(--border);
+  cursor: not-allowed;
+}
+
+.dropzone--disabled .dropzone__primary,
+.dropzone--disabled .dropzone__secondary {
+  color: var(--fg-faint);
+}
+
+/* ------------------------------------------------------------- secondary -- */
+
+.landing__secondary {
+  flex: 0 1 auto;
+  padding: var(--space-3);
+
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .landing__secondary {
+    transition:
+      border-color var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out);
+  }
+}
+
+.landing__secondary:hover:not(:disabled) {
+  border-color: var(--fg);
+  background: var(--bg-inset);
+}
+
+.landing__secondary:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.landing__secondary:disabled {
+  color: var(--fg-faint);
+  cursor: not-allowed;
+}
+
+.landing__error {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2);
+  background: var(--danger-100);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--danger-700);
+}
+
+/* --------------------------------------------------------------- samples -- */
+
+.landing__samples {
+  margin-block-start: var(--space-4);
+}
+
+.landing__samples-label {
+  display: block;
+  margin-block-end: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--fg-subtle);
+}
+
+.landing__sample-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.landing__sample {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+
+  padding: var(--space-1) var(--space-2);
+
+  background: none;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .landing__sample {
+    transition:
+      border-color var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out);
+  }
+}
+
+.landing__sample:hover:not(:disabled) {
+  border-color: var(--fg);
+  background: var(--bg-inset);
+}
+
+.landing__sample:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.landing__sample:disabled {
+  color: var(--fg-faint);
+  cursor: not-allowed;
+}
+
+.landing__sample-meta {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--fg-subtle);
+}
+
+.landing__link {
+  margin-block-start: var(--space-3);
+  padding: 0;
+  background: none;
+  border: none;
+  border-block-end: 1px solid var(--border-strong);
+
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+
+.landing__link:hover {
+  color: var(--fg);
+  border-color: var(--fg);
+}
+
+/* -------------------------------------------------------------- specimen -- */
+/* The hero's thesis. Bordered, because this one IS a specimen — a thing shown
+   under glass — and the border is the glass. It is the only card on the page. */
+
+.landing__specimen {
+  margin-block-start: var(--space-8);
+}
+
+.specimen {
+  padding: var(--space-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .specimen {
+    animation: specimen-in 620ms var(--ease-out) both;
+  }
+  .specimen__title {
+    animation: specimen-in 620ms 90ms var(--ease-out) both;
+  }
+  .specimen__body {
+    animation: specimen-in 620ms 180ms var(--ease-out) both;
+  }
+  .specimen__mark {
+    animation: specimen-in 620ms 300ms var(--ease-out) both;
+  }
+}
+
+/* The finding assembles top-down, once, on load: eyebrow, headline, evidence,
+   provenance. That order is the argument of the whole product — the claim
+   arrives, then what backs it, then where it came from — so the sequence is
+   worth the four keyframes. It never repeats. */
+@keyframes specimen-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.specimen__eyebrow {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+.specimen__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+  color: var(--fg);
+}
+
+@media (max-width: 600px) {
+  .specimen__title {
+    font-size: var(--text-xl);
+  }
+}
+
+.specimen__body {
+  margin: var(--space-2) 0 0;
+  max-inline-size: var(--measure);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--fg-muted);
+  /* Tabular figures so the two averages in this sentence line up in width the
+     way they would in a table. Small thing; it is why the sentence reads as a
+     measurement rather than as prose about one. */
+  font-variant-numeric: tabular-nums;
+}
+
+.specimen__mark {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: var(--space-3) 0 0;
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid var(--border);
+
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--provenance-tracking);
+  text-transform: uppercase;
+  color: var(--provenance-fg-ai);
+}
+
+.landing__specimen-note {
+  margin: var(--space-3) 0 0;
+  max-inline-size: var(--measure);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--fg-subtle);
+}
+
+/* ------------------------------------------------------------------ flow -- */
+/* Numbered because this genuinely is a sequence: each step happens after the
+   one above it, and the order is information the reader needs. Numbering a set
+   of unordered features would be decoration; numbering this is not. */
+
+.landing__flow {
+  margin-block-start: var(--space-7);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--border);
+}
+
+.flow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flow__step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-05);
+}
+
+.flow__n {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  color: var(--fg-faint);
+}
+
+.flow__label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--fg);
+}
+
+.flow__detail {
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  color: var(--fg-subtle);
+}
+
+/* -------------------------------------------------------------- recent -- */
+/* Datasets already on the server. Rendered as a plain list of buttons rather
+   than as cards: this is a way back in, not a gallery, and the file name is the
+   only thing anyone recognises theirs by. */
+
+.landing__recent {
+  margin-block-start: var(--space-4);
+}
+
+.landing__recent-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-05);
+}
+
+.landing__recent-item {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-2);
-  width: 100%;
-  margin-top: auto;
-  padding-top: var(--space-2);
+  inline-size: 100%;
+
+  padding: var(--space-1) var(--space-2);
+
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: start;
 }
 
-.sample-meta {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
+@media (prefers-reduced-motion: no-preference) {
+  .landing__recent-item {
+    transition:
+      border-color var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out);
+  }
+}
+
+.landing__recent-item:hover:not(:disabled) {
+  border-color: var(--fg);
+  background: var(--bg-inset);
+}
+
+.landing__recent-item:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.landing__recent-item:disabled {
   color: var(--fg-faint);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  cursor: not-allowed;
 }
 
-.sample-go {
+.landing__recent-name {
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   color: var(--fg);
-  white-space: nowrap;
-  transition: transform var(--dur-fast) var(--ease-out);
+  overflow-wrap: anywhere;
 }
 
-.sample-card:hover:not(:disabled) .sample-go {
-  transform: translateX(2px);
-}
-
-.sample-card-loading {
-  min-height: 180px;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  list-style: none;
-  overflow: hidden;
-}
-
-.sample-skeleton {
-  display: block;
-  width: 100%;
-  height: 100%;
-  min-height: 180px;
-  border-radius: 0;
-}
-
-/* ------------------------------------------------------------- responsive */
-
-@media (max-width: 720px) {
-  .landing {
-    padding: var(--space-4) var(--space-2) var(--space-6);
-  }
-
-  .hero {
-    padding-block: var(--space-4) var(--space-5);
-  }
-
-  .hero-title {
-    /* At narrow widths the two hard-wrapped lines are the right shape anyway,
-     * but nowrap would let a long word overflow the viewport. */
-    text-wrap: balance;
-  }
-
-  .hero-cta {
-    flex: 1 1 auto;
-    justify-content: center;
-  }
+.landing__recent-meta {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--fg-subtle);
+  font-variant-numeric: tabular-nums;
 }

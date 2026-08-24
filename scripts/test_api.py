@@ -31,6 +31,11 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from backend.main import create_app  # noqa: E402
 from backend.session import store  # noqa: E402
+from core.tools import TOOLS as _TOOLS  # noqa: E402
+
+# Read off core.tools rather than restated, so a new tool cannot make this
+# assertion quietly wrong in the permissive direction.
+TOOL_NAMES = set(_TOOLS)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SAMPLES = os.path.join(ROOT, "samples")
@@ -297,11 +302,34 @@ def test_chat_endpoint() -> None:
         print("         (the model was unreachable; the grounded path is covered "
               "by scripts/test_chat.py)")
     else:
+        # Two families of source are legitimate. The cached-context blocks are
+        # named by core.chat.build_context; a "computed_<tool>" block means the
+        # answer came from a calculation core.tools ran over the real frame, and
+        # names which one -- so the claim is still checkable, which is the point
+        # of grounding it in the first place.
+        named = set(body["grounded_on"])
+        context_blocks = {"profile", "routing", "timeseries_stats", "geo_stats",
+                          "tabular_stats", "forecast_metrics"}
+        computed_blocks = {f"computed_{name}" for name in TOOL_NAMES}
         check(
-            "grounded_on names only real context blocks",
-            set(body["grounded_on"]) <= {"profile", "routing", "timeseries_stats",
-                                         "geo_stats", "tabular_stats", "forecast_metrics"},
+            "grounded_on names only real context blocks or real calculations",
+            named <= (context_blocks | computed_blocks),
             str(body["grounded_on"]),
+        )
+
+    check(
+        "answered_by is one of the four honest labels",
+        body.get("answered_by") in {"computed", "model", "summaries", "unavailable"},
+        str(body.get("answered_by")),
+    )
+    if body.get("action"):
+        # An action is a promise that a button will work. Check it is a spec the
+        # chart endpoint actually accepts rather than trusting the label.
+        drawn = client.post(f"/api/chart/{sid}", json=body["action"])
+        check(
+            "an action attached to a reply renders as a chart",
+            drawn.status_code == 200,
+            f"{drawn.status_code} {drawn.json().get('detail', '')}",
         )
 
     response = client.post(f"/api/chat/{sid}", json={"message": ""})
@@ -338,19 +366,83 @@ def test_samples_endpoint() -> None:
 
 # -------------------------------------------------------------------- session
 def test_session_lifetime() -> None:
+    """The store's contract, which changed when datasets became durable.
+
+    It used to be a cache with a TTL, and this test used to assert that a
+    session expired and that the LRU cap silently dropped one. Neither is true
+    any more, and asserting them would now be asserting a bug: a "My datasets"
+    list that empties itself is not a list of your datasets.
+
+    What is tested instead is the property that replaced them -- eviction from
+    MEMORY does not lose a dataset, because the bytes are on disk and the next
+    request re-reads them. Plus deletion, which is now the only thing that
+    actually removes anything.
+    """
     print("\nsession store")
-    from backend.session import SessionStore  # local: only this test needs it
+    import shutil
+    import tempfile
+
     import pandas as pd
 
-    ephemeral = SessionStore(ttl_seconds=0)
-    created = ephemeral.create("x.csv", pd.DataFrame({"a": [1]}), {}, {})
-    check("expired session is not returned", ephemeral.get(created.id) is None)
+    from backend.session import SessionStore  # local: only this test needs it
 
-    bounded = SessionStore(max_sessions=2)
-    ids = [bounded.create(f"{i}.csv", pd.DataFrame({"a": [i]}), {}, {}).id for i in range(3)]
-    check("LRU cap holds at max_sessions", bounded.count() == 2, str(bounded.count()))
-    check("least recently used was evicted", bounded.get(ids[0]) is None)
-    check("most recent survives", bounded.get(ids[2]) is not None)
+    workspace = tempfile.mkdtemp(prefix="nexus-test-store-")
+    try:
+        # max_live=1 forces an eviction from memory on the second create.
+        subject = SessionStore(store_dir=workspace, max_live=1, max_stored=2)
+
+        frame = pd.DataFrame({"a": [1, 2, 3]})
+        content = frame.to_csv(index=False).encode("utf-8")
+        first = subject.create("first.csv", frame, {"columns": []}, {}, content)
+        second = subject.create("second.csv", frame, {"columns": []}, {}, content)
+
+        check(
+            "both datasets remain listed after the frame cache overflows",
+            subject.count() == 2,
+            str(subject.count()),
+        )
+
+        # The point of the redesign: the first frame was evicted from memory,
+        # and asking for it re-reads the file rather than returning None.
+        recovered = subject.get(first.id)
+        check("an evicted dataset is recovered from disk", recovered is not None)
+        if recovered is not None:
+            check(
+                "the recovered frame holds the same rows",
+                len(recovered.df) == 3,
+                str(len(recovered.df)),
+            )
+            check(
+                "the recovered dataset keeps its filename",
+                recovered.filename == "first.csv",
+                recovered.filename,
+            )
+
+        # Past the stored cap the least recently OPENED is deleted outright.
+        # That is `second`, not the oldest: `first` was re-read a moment ago and
+        # its access time refreshed, which is the whole difference between LRU
+        # and FIFO and is worth pinning down.
+        third = subject.create("third.csv", frame, {"columns": []}, {}, content)
+        check(
+            "the stored cap holds at max_stored",
+            subject.count() == 2,
+            str(subject.count()),
+        )
+        check("the newest dataset survives", subject.get(third.id) is not None)
+        check(
+            "the least recently opened was evicted, not the oldest",
+            subject.get(second.id) is None and subject.get(first.id) is not None,
+        )
+
+        check("deleting a dataset reports success", subject.delete(first.id))
+        check("a deleted dataset is gone", subject.get(first.id) is None)
+        check("deleting it twice reports failure", not subject.delete(first.id))
+
+        # Timeline events are recorded when work happens rather than assembled
+        # for display, so a freshly created dataset already carries one.
+        check("an upload records a timeline event", len(third.events) >= 1)
+    finally:
+        shutil.rmtree(workspace, ignore_errors=True)
 
 
 def main() -> int:
