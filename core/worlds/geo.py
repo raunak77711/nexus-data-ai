@@ -151,7 +151,11 @@ fig = px.scatter_map(
     size_max=$max_px,
     hover_name=$hover_name,
     hover_data=$hover_data,
-    color_continuous_scale='Greys',
+    # A single-hue sequential scale: darker/more saturated markers are a bigger
+    # value, lighter markers a smaller one. Blue reads clearly against both the
+    # open-street-map basemap's muted greens/tans and the app's own grey chrome,
+    # which a grey-on-grey scale did not.
+    color_continuous_scale='Blues',
     # Centre and zoom are derived from this data's own bounding box, not
     # hardcoded -- see core/worlds/geo.py::_fit_view for the mercator maths.
     center={'lat': $center_lat, 'lon': $center_lon},

@@ -181,23 +181,27 @@
   /* ---------------------------------------------------------------- charts --
    * The series ramp, read by PlotFigure and handed to plotly as its colorway.
    *
-   * Achromatic, and separated by LIGHTNESS rather than by hue: the steps
-   * alternate dark/light so that two adjacent series in a legend are never two
-   * similar greys. That is what makes a monochrome ramp legible where a
-   * sequential one would not be, and it has a second benefit the coloured
-   * palette never had -- a ramp with no hue in it is identical for every form
-   * of colour-vision deficiency.
+   * This is the one deliberate exception to the page's monochrome rule: the
+   * chrome around a chart stays neutral so nothing competes with the data, but
+   * inside the plot itself colour is the encoding, and a grey-on-grey ramp
+   * made adjacent series hard to tell apart at a glance. Six hues, fixed order,
+   * chosen so no two adjacent slots are confusable under the common forms of
+   * colour-vision deficiency (validated: worst adjacent CVD delta 9.1, worst
+   * adjacent normal-vision delta 19.6 -- see the dataviz skill's palette
+   * validator). Three slots (aqua, amber, magenta) sit below 3:1 contrast on a
+   * white surface, so PlotFigure always keeps a legend and direct labels
+   * rather than relying on colour alone.
    *
    * Six steps because that is the ceiling core/ imposes on split charts
    * (MAX_ENTITY_LINES); a seventh would be a colour for a series that cannot
    * be drawn.
    */
-  --chart-1: #0b0b0d;
-  --chart-2: #9a9aa4;
-  --chart-3: #4a4a53;
-  --chart-4: #c8c8d0;
-  --chart-5: #6e6e79;
-  --chart-6: #dededf;
+  --chart-1: #2a78d6; /* blue */
+  --chart-2: #eb6834; /* orange */
+  --chart-3: #1baf7a; /* aqua */
+  --chart-4: #eda100; /* amber */
+  --chart-5: #e87ba4; /* magenta */
+  --chart-6: #008300; /* green */
 
   /* Roles. Components reference these, never the ramps above, so the dark
    * theme only has to redefine the roles. */
@@ -342,14 +346,15 @@
     --type-text: var(--fg-subtle);
     --type-text-bg: transparent;
 
-    /* The series ramp inverts: the first series is the brightest thing on a
-     * dark page, exactly as it is the darkest thing on a light one. */
-    --chart-1: #f7f7f8;
-    --chart-2: #7c7c88;
-    --chart-3: #c2c2cc;
-    --chart-4: #55555f;
-    --chart-5: #9e9eaa;
-    --chart-6: #3a3a42;
+    /* Same six hues, stepped for the dark surface rather than a separate
+     * palette -- validated against #0b0b0d: all six clear 3:1 contrast, worst
+     * adjacent CVD delta 8.4, worst adjacent normal-vision delta 19.3. */
+    --chart-1: #3987e5; /* blue */
+    --chart-2: #d95926; /* orange */
+    --chart-3: #199e70; /* aqua */
+    --chart-4: #c98500; /* amber */
+    --chart-5: #d55181; /* magenta */
+    --chart-6: #008300; /* green */
 
     --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.5);
     --shadow-md: 0 1px 3px rgb(0 0 0 / 0.4), 0 12px 32px rgb(0 0 0 / 0.55);

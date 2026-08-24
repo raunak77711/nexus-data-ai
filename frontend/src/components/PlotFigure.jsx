@@ -96,16 +96,15 @@ function readTheme() {
     surface: value('--bg-elevated', '#ffffff'),
     font: value('--font-body', 'Inter, sans-serif'),
     // The series ramp, read from the cascade rather than duplicated here so a
-    // repalette is a change to tokens.css alone. Achromatic and separated by
-    // lightness -- see the note beside --chart-1 for why that is the more
-    // legible choice here, not merely the more on-brand one.
+    // repalette is a change to tokens.css alone. See the note beside
+    // --chart-1 for the CVD-safety reasoning behind the fixed hue order.
     colorway: [
-      value('--chart-1', '#0b0b0d'),
-      value('--chart-2', '#9a9aa4'),
-      value('--chart-3', '#4a4a53'),
-      value('--chart-4', '#c8c8d0'),
-      value('--chart-5', '#6e6e79'),
-      value('--chart-6', '#dededf'),
+      value('--chart-1', '#2a78d6'),
+      value('--chart-2', '#eb6834'),
+      value('--chart-3', '#1baf7a'),
+      value('--chart-4', '#eda100'),
+      value('--chart-5', '#e87ba4'),
+      value('--chart-6', '#008300'),
     ],
   }
 }

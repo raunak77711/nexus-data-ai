@@ -200,12 +200,14 @@ fig.update_yaxes(autorange="reversed")
 
 # A diverging scale, because a correlation matrix has a meaningful midpoint at
 # zero: -0.8 and +0.8 are equally strong and opposite in direction, and a
-# sequential ramp would render one of them as "nearly nothing". Neutral in the
-# middle so that "no relationship" reads as absence rather than as a colour.
+# sequential ramp would render one of them as "nearly nothing". Neutral grey in
+# the middle so that "no relationship" reads as absence rather than as a
+# colour; red and blue read as opposite poles at a glance, unlike the previous
+# rust/teal pairing, which read as two shades of the same murky brown-green.
 HEATMAP_COLORSCALE = [
-    [0.0, "#8c4a45"],
-    [0.5, "#efefF2"],
-    [1.0, "#1f4d5c"],
+    [0.0, "#c0392b"],
+    [0.5, "#f0efec"],
+    [1.0, "#1c5cab"],
 ]
 
 
