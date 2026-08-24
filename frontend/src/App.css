@@ -1,19 +1,17 @@
 /**
  * The application shell.
  *
- * There is one, and it is a single full-height region. The sidebar this file
- * used to lay out is gone with the four-view dashboard it navigated: every
- * screen now centres its own narrow column, so the shell's whole job is to
- * paint the page and give focus somewhere to land.
+ * One region below the navbar. Every page inside it centres its own column and
+ * chooses its own measure, so the shell's whole job is to paint the page, hold
+ * the offline banner, and give focus somewhere to land.
  *
- * The per-screen widths live in Home.css and Ready.css rather than here, and
- * are deliberately identical — the upload box and the confirmation that
- * replaces it sit in the same band of the screen, which is what makes the
- * transition read as one page progressing rather than as a new app opening.
+ * The one exception is the analyse workspace, which is a full-height
+ * application screen rather than a document — it gets `--app` so its rail can
+ * be sticky under the navbar rather than under the top of the window.
  */
 
 .app-shell {
-  min-height: 100dvh;
+  min-block-size: calc(100dvh - var(--header-height));
   background: var(--bg);
 }
 
@@ -24,11 +22,61 @@
   outline-offset: -3px;
 }
 
+/* ------------------------------------------------------------ page swap -- */
+/*
+ * Every page fades up as it mounts. The keying is done in React by which
+ * branch renders, so there is nothing to co-ordinate here: a new page is a new
+ * subtree, and a new subtree runs this animation once.
+ *
+ * Deliberately short and deliberately only upward. A cross-fade between two
+ * absolutely-positioned pages would be smoother and would also mean every
+ * navigation holds two full pages in the layout — which is a real cost on the
+ * workspace, and buys 100ms of polish.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .app-shell > * {
+    animation: page-in var(--dur-normal) var(--ease-out) both;
+  }
+}
+
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
 .offline-banner {
-  max-width: 620px;
-  margin: 0 auto;
+  max-inline-size: var(--content-max);
+  margin-inline: auto;
   padding: var(--space-2) var(--space-3) 0;
 }
 
-/* `fade-in` is used by both screens' entry animation and is defined in
- * base.css alongside the other shared keyframes. */
+/* The instruction for whoever is running the server, demoted to its own quiet
+   line under the sentence for whoever is reading the page. */
+.offline-banner__how {
+  display: block;
+  margin-block-start: var(--space-1);
+  font-size: var(--text-xs);
+  opacity: 0.82;
+}
+
+/**
+ * The global file input.
+ *
+ * Visually hidden rather than `display: none`: a display-none input cannot be
+ * opened with .click() in every browser, and this one exists only to be opened
+ * that way. It is out of the tab order because three visible buttons already
+ * trigger it, and tabbing into an invisible file field is a dead stop.
+ */
+.app-file-input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  border: 0;
+}
+
+/* `fade-in` and `rise-in` are shared entrance animations and live in base.css
+ * alongside the other keyframes. */

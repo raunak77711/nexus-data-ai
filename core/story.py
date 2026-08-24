@@ -45,6 +45,7 @@ from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 import pandas as pd
 
 from core import grounding, llm
+from core.phrasing import count_of
 from core.llm import LLMError
 
 logger = logging.getLogger(__name__)
@@ -497,8 +498,9 @@ def _fallback_summary(dataset: Dict[str, Any], n_points: int) -> str:
         character = ", and it carries coordinates, so its values have places."
     elif kinds.get("numeric") and kinds.get("categorical"):
         character = (
-            f", and it measures {kinds.get('numeric', 0)} thing(s) across "
-            f"{kinds.get('categorical', 0)} way(s) of grouping them."
+            f", and it measures {count_of(kinds.get('numeric', 0), 'thing')} "
+            f"across {count_of(kinds.get('categorical', 0), 'way')} of grouping "
+            "them."
         )
     else:
         character = "."
@@ -506,7 +508,8 @@ def _fallback_summary(dataset: Dict[str, Any], n_points: int) -> str:
     return (
         shape + character
         + f" I checked it for quality problems, trends, relationships and "
-        f"unusual values, and found {n_points} thing(s) worth telling you about."
+        f"unusual values, and found {count_of(n_points, 'thing')} worth telling "
+        "you about."
     )
 
 
@@ -571,8 +574,9 @@ def brief(
 
     return {
         "headline": (
-            f"I've analysed your data. Here are the "
-            f"{len(points)} thing(s) you should know."
+            f"I've analysed your data. Here "
+            f"{'is' if len(points) == 1 else 'are'} the "
+            f"{count_of(len(points), 'thing')} you should know."
             if points
             else "I've analysed your data."
         ),

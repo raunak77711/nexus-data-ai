@@ -1,0 +1,429 @@
+/**
+ * The global navigation bar.
+ *
+ * Sticky, translucent, and borderless until the page moves. Everything in it
+ * is text -- no icons for navigation -- which is the same decision the
+ * workspace rail makes and for the same reason: four words are already
+ * unambiguous, and four glyphs would be four things to learn.
+ */
+
+.nav {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 50;
+
+  background: color-mix(in oklab, var(--bg) 82%, transparent);
+  backdrop-filter: saturate(160%) blur(14px);
+  -webkit-backdrop-filter: saturate(160%) blur(14px);
+
+  /* The border is transparent rather than absent, so gaining it does not move
+     the 1px of content underneath. */
+  border-block-end: 1px solid transparent;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nav {
+    transition:
+      border-color var(--dur-normal) var(--ease-out),
+      background-color var(--dur-normal) var(--ease-out);
+  }
+}
+
+.nav--lifted {
+  border-block-end-color: var(--border);
+  background: color-mix(in oklab, var(--bg) 92%, transparent);
+}
+
+/* The assistant is a column beside the page on a wide screen (see
+   Assistant.css), so the bar makes room for it exactly as the workspace does.
+   Below 900px the panel is a full sheet over everything and there is nothing
+   to make room for. */
+@media (min-width: 900px) {
+  .nav--narrowed {
+    padding-inline-end: var(--panel-width);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nav {
+    transition:
+      border-color var(--dur-normal) var(--ease-out),
+      background-color var(--dur-normal) var(--ease-out),
+      padding-inline-end var(--dur-slow) var(--ease-out);
+  }
+}
+
+.nav__inner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+
+  max-inline-size: var(--content-max);
+  /* Minus the bar's own bottom border, so the bar's TOTAL height is exactly
+     --header-height. Everything that sticks under it -- the dataset strip on
+     Analyze, and the workspace rail under that -- offsets by the token, and a
+     bar one pixel taller than its token leaves a permanent one-pixel sliver
+     of content showing above the next strip. */
+  min-block-size: calc(var(--header-height) - 1px);
+  margin-inline: auto;
+  padding-inline: var(--space-3);
+}
+
+/* ---------------------------------------------------------------- brand -- */
+
+.nav__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: none;
+
+  padding: var(--space-05);
+  margin-inline-start: calc(var(--space-05) * -1);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.nav__mark {
+  flex: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nav__mark {
+    transition: transform var(--dur-slow) var(--ease-spring);
+  }
+  .nav__brand:hover .nav__mark {
+    /* A quarter turn of a mark whose outline is rotationally symmetric but
+       whose stroke is not: it moves, and it lands looking like itself. */
+    transform: rotate(90deg);
+  }
+}
+
+.nav__wordmark {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+  text-align: start;
+}
+
+.nav__word {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg);
+}
+
+.nav__sub {
+  margin-block-start: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+/* ---------------------------------------------------------------- links -- */
+
+.nav__links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-05);
+  flex: 1;
+}
+
+.nav__link {
+  position: relative;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-normal);
+  color: var(--fg-subtle);
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nav__link {
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+}
+
+/* The active marker: a hairline under the label that grows from the centre.
+   It is drawn for hover AND for the current page, at different weights, so
+   the hover reads as a preview of the state rather than a separate effect. */
+.nav__link::after {
+  content: "";
+  position: absolute;
+  inset-inline: var(--space-2);
+  inset-block-end: 2px;
+  block-size: 1.5px;
+  border-radius: 2px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: center;
+  opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nav__link::after {
+    transition: transform var(--dur-normal) var(--ease-out);
+  }
+}
+
+.nav__link:hover {
+  color: var(--fg);
+}
+
+.nav__link:hover::after {
+  transform: scaleX(1);
+}
+
+.nav__link[aria-current="page"] {
+  color: var(--fg);
+}
+
+.nav__link[aria-current="page"]::after {
+  transform: scaleX(1);
+  opacity: 1;
+}
+
+/* -------------------------------------------------------------- actions -- */
+
+.nav__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: none;
+}
+
+.nav__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+
+  padding: 0.44rem var(--space-2);
+
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--fg);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nav__action {
+    transition:
+      background-color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out),
+      transform var(--dur-instant) var(--ease-out);
+  }
+}
+
+.nav__action:hover:not(:disabled) {
+  border-color: var(--fg);
+  background: var(--bg-inset);
+}
+
+.nav__action:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.nav__action:disabled {
+  color: var(--fg-faint);
+  border-color: var(--border);
+  cursor: not-allowed;
+}
+
+.nav__action--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+
+.nav__action--primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  color: var(--accent-fg);
+}
+
+.nav__action--primary:disabled {
+  background: var(--bg-inset);
+  color: var(--fg-faint);
+}
+
+.nav__spark {
+  inline-size: 12px;
+  block-size: 12px;
+  flex: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nav__spark {
+    transition: transform var(--dur-normal) var(--ease-spring);
+  }
+  .nav__action:hover .nav__spark {
+    transform: rotate(90deg);
+  }
+}
+
+/* ----------------------------------------------------------- the burger -- */
+
+.nav__menu-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 34px;
+  block-size: 34px;
+
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.nav__menu-toggle:hover {
+  border-color: var(--fg);
+}
+
+/* Two lines, not three. They rotate into an X, which is the only reason a
+   burger should animate at all -- to say that the same control closes it. */
+.nav__burger {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  inline-size: 15px;
+}
+
+.nav__burger i {
+  display: block;
+  block-size: 1.5px;
+  background: currentColor;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nav__burger i {
+    transition: transform var(--dur-normal) var(--ease-out);
+  }
+}
+
+.nav__burger--open i:first-child {
+  transform: translateY(2.75px) rotate(45deg);
+}
+
+.nav__burger--open i:last-child {
+  transform: translateY(-2.75px) rotate(-45deg);
+}
+
+/* --------------------------------------------------------- mobile menu -- */
+/* A grid-rows 0fr -> 1fr transition, which is the one way to animate to a
+   height nobody has measured. The inner element needs min-block-size: 0 or it
+   refuses to be squeezed. */
+
+.nav__menu {
+  display: none;
+  overflow: hidden;
+  grid-template-rows: 0fr;
+  border-block-start: 1px solid transparent;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nav__menu {
+    transition:
+      grid-template-rows var(--dur-slow) var(--ease-out),
+      border-color var(--dur-slow) var(--ease-out);
+  }
+}
+
+.nav__menu--open {
+  grid-template-rows: 1fr;
+  border-block-start-color: var(--border);
+}
+
+.nav__menu-inner {
+  min-block-size: 0;
+  display: flex;
+  flex-direction: column;
+  padding-inline: var(--space-3);
+}
+
+.nav__menu--open .nav__menu-inner {
+  padding-block: var(--space-1) var(--space-2);
+}
+
+.nav__menu-link {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  inline-size: 100%;
+
+  padding: var(--space-2) var(--space-1);
+  border-block-end: 1px solid var(--border);
+
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--fg-muted);
+  text-align: start;
+  cursor: pointer;
+}
+
+.nav__menu-link:last-child {
+  border-block-end: none;
+}
+
+.nav__menu-link[aria-current="page"],
+.nav__menu-link--action {
+  color: var(--fg);
+}
+
+/* ----------------------------------------------------------- responsive -- */
+
+@media (max-width: 900px) {
+  .nav__links {
+    display: none;
+  }
+
+  .nav__menu {
+    display: grid;
+  }
+
+  .nav__menu-toggle {
+    display: inline-flex;
+  }
+
+  .nav__inner {
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding-inline: var(--space-2);
+  }
+
+  /* The bare "AI Analyst" pill duplicates both the floating launcher and the
+     menu entry at this size, and it is the first thing that should go. */
+  .nav__actions > .nav__action:not(.nav__action--primary) {
+    display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .nav__sub {
+    display: none;
+  }
+}
+
+/* A printed report should not carry the app's chrome. */
+@media print {
+  .nav {
+    display: none;
+  }
+}

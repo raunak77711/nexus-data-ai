@@ -121,16 +121,22 @@ charts, quality caveats and recommendations, printable straight to PDF.
   ┌─ browser ─────────────────────────────────────────────────────────────┐
   │  frontend/  React 19 + Vite, hand-written CSS, react-plotly.js         │
   │                                                                       │
-  │   App.jsx ── which screen, the session, the detail mode               │
+  │   App.jsx ── which page, the session, the detail mode                 │
+  │     │        useRoute() keeps it in the hash, so Back works           │
   │     │                                                                 │
-  │     ├── Landing      hero = a SPECIMEN FINDING, not a dashboard shot   │
-  │     ├── Analyzing    stages advanced by real responses, never a timer  │
-  │     └── Workspace    Story · Charts · Health · Actions · Rows ·        │
-  │           │          Report · Datasets                                │
-  │           └── useAnalysis()  runs the whole analysis, owns its stages, │
-  │                              its cache and its race protection        │
+  │     ├── Home         hero = a SPECIMEN FINDING, not a dashboard shot   │
+  │     ├── Analyze  ┬── Analyzing  stages advanced by real responses,    │
+  │     │            │              never a timer                         │
+  │     │            ├── Workspace  Story · Charts · Health · Actions ·   │
+  │     │            │              Rows · Report · Compare               │
+  │     │            └── useAnalysis()  runs the whole analysis, owns its │
+  │     │                 stages, its cache and its race protection       │
+  │     ├── Datasets     the library: open, inspect, delete               │
+  │     └── About        the argument for the product                     │
   │                                                                       │
-  │   Assistant   on EVERY screen, home page included, context-aware      │
+  │   NavBar      one bar on every page: Home · Analyze · Datasets · About │
+  │   Assistant   on EVERY page, home included, context-aware; reachable  │
+  │               from the navbar and from a floating launcher            │
   │   Provenance  the mark on every claim: computed / worded / suggested  │
   └──────────────────────────────┬────────────────────────────────────────┘
                                  │  JSON over HTTP

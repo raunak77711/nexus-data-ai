@@ -3,7 +3,6 @@ import * as api from '../api'
 import PlotFigure from './PlotFigure'
 import Provenance from './Provenance'
 import ExplainThis from './ExplainThis'
-import ScoreDial from './ScoreDial'
 import './Story.css'
 
 /**
@@ -35,7 +34,6 @@ import './Story.css'
 export default function Story({
   sessionId,
   briefing,
-  health,
   questions,
   mode,
   onAsk,
@@ -52,7 +50,10 @@ export default function Story({
       {/* ------------------------------------------------------- summary -- */}
       <header className="story__head">
         <div className="story__head-main">
-          <p className="story__eyebrow">The briefing</p>
+          {/* Not "The briefing". The page speaks as the analyst everywhere
+              else, and this is the sentence it has been working towards -- so
+              it says what it did rather than naming the artefact. */}
+          <p className="story__eyebrow">Here&rsquo;s what I found</p>
           <h1 className="story__headline">{briefing.headline}</h1>
           <p className="story__summary">{briefing.summary}</p>
           <Provenance
@@ -61,29 +62,11 @@ export default function Story({
           />
         </div>
 
-        {/* The health score sits in the header rather than waiting on its own
-            tab. "Can I trust this?" is the question a reader has while reading
-            the first finding, not after finishing the last one. */}
-        {health?.score != null && (
-          <button
-            type="button"
-            className="story__score"
-            onClick={() => onGoToTab('health')}
-            title="Open the full data health report"
-          >
-            <ScoreDial score={health.score} />
-            <span className="story__score-text">
-              <span className="story__score-grade">{health.grade}</span>
-              <span className="story__score-detail">
-                {health.counts?.critical
-                  ? `${health.counts.critical} serious issue${
-                      health.counts.critical === 1 ? '' : 's'
-                    }`
-                  : `${health.checks_run} checks passed`}
-              </span>
-            </span>
-          </button>
-        )}
+        {/* The health score used to be repeated here as a full dial. It has
+            moved to the workspace's sticky header, which carries it on every
+            tab and keeps it in reach after the reader has scrolled past this
+            heading -- two gauges a hundred pixels apart was one gauge and one
+            piece of clutter. */}
       </header>
 
       {/* -------------------------------------------------------- points -- */}

@@ -1,3 +1,4 @@
+import { scoreBand } from '../lib/score'
 import './ScoreDial.css'
 
 /**
@@ -24,12 +25,6 @@ import './ScoreDial.css'
 const RADIUS = 20
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 
-function band(score) {
-  if (score >= 75) return 'good'
-  if (score >= 50) return 'fair'
-  return 'poor'
-}
-
 export default function ScoreDial({ score, size = 52 }) {
   // Clamped rather than trusted: a score outside 0-100 would draw an arc
   // wrapping past its own start, which looks like a rendering bug rather than
@@ -40,7 +35,7 @@ export default function ScoreDial({ score, size = 52 }) {
   return (
     <span
       className="dial"
-      data-band={band(value)}
+      data-band={scoreBand(value)}
       style={{ inlineSize: size, blockSize: size }}
       role="img"
       aria-label={`Data health score ${Math.round(value)} out of 100`}

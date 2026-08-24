@@ -20,13 +20,50 @@ import './Analyzing.css'
  * workspace behind this renders whatever arrived, so a failed stage means one
  * missing section, and saying so here is how the user knows why.
  */
+/**
+ * The headline, chosen by how far the run has actually got.
+ *
+ * This is not a rotating set of reassuring phrases on a timer. `stageIndex` is
+ * the number of requests that have ANSWERED, so on a small file the reader
+ * sees the last of these almost immediately and on a large one they watch the
+ * first sit there -- which is the whole point. A phrase that advances on a
+ * clock is the thing this screen exists not to be.
+ */
+function headlineFor(stageIndex, total) {
+  if (stageIndex <= 0) return 'Understanding your data.'
+  if (stageIndex === 1) return 'Finding patterns.'
+  if (stageIndex < total - 1) return 'Preparing your insights.'
+  return 'Writing it up.'
+}
+
 export default function Analyzing({ filename, stages, stageIndex, error }) {
+  const done = Math.min(stageIndex, stages.length)
+  const percent = Math.round((done / stages.length) * 100)
+
   return (
     <div className="analyzing">
       <div className="analyzing__inner">
         <p className="analyzing__eyebrow">Reading {filename || 'your file'}</p>
 
-        <h1 className="analyzing__headline">Working through your data.</h1>
+        <h1 className="analyzing__headline">
+          {headlineFor(stageIndex, stages.length)}
+        </h1>
+
+        {/* A real proportion: stages completed over stages to run. It is
+            allowed to sit still, because sometimes the work does. */}
+        <div
+          className="analyzing__progress"
+          role="progressbar"
+          aria-valuenow={percent}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Analysis progress"
+        >
+          <span
+            className="analyzing__progress-fill"
+            style={{ transform: `scaleX(${done / stages.length})` }}
+          />
+        </div>
 
         <ol className="analyzing__stages">
           {stages.map((stage, index) => {

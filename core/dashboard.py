@@ -49,6 +49,7 @@ import numpy as np
 import pandas as pd
 
 from core import charts
+from core.phrasing import count_of
 
 logger = logging.getLogger(__name__)
 
@@ -318,8 +319,8 @@ def _kpis(
             "label": "Columns",
             "value": _fmt(len(df.columns)),
             "note": (
-                f"{len(grouped['numeric'])} measure(s), "
-                f"{len(grouped['categorical'])} category/ies"
+                f"{count_of(len(grouped['numeric']), 'measure')}, "
+                f"{count_of(len(grouped['categorical']), 'category', 'categories')}"
             ),
             "kind": "shape",
         },
@@ -653,8 +654,9 @@ def compose(
         )
     else:
         note = (
-            f"{len(panels)} chart(s) chosen from {len(proposals)} the data could "
-            f"support, ranked by how much each is likely to tell you. "
+            f"{count_of(len(panels), 'chart')}, chosen from the {len(proposals)} "
+            f"this data could support and ranked by how much each is likely to "
+            f"tell you. "
             f"Every one of them is built from your columns, not from a template."
         )
 

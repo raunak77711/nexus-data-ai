@@ -1,23 +1,22 @@
 /**
- * The workspace shell.
+ * The Analyze workspace.
  *
- * A fixed rail on the left and a scrolling column on the right. The rail is
- * text-only — no icons — which is the deliberate choice here. Icons for
- * "Story", "Health" and "Actions" would be seven small metaphors the user has
- * to learn, six of them ambiguous, in exchange for narrowing a column that is
- * not short of space. Words are already the interface everywhere else in this
- * app; the navigation should not be the exception.
+ * A sticky dataset header across the top, a fixed rail on the left, and a
+ * scrolling column beside it. The rail is text-only -- no icons -- which is
+ * the deliberate choice here. Icons for "Story", "Health" and "Actions" would
+ * be seven small metaphors the user has to learn, six of them ambiguous, in
+ * exchange for narrowing a column that is not short of space. Words are
+ * already the interface everywhere else in this app; the navigation should not
+ * be the exception.
  */
 
 .workspace {
-  display: grid;
-  grid-template-columns: var(--sidebar-width) 1fr;
-  min-block-size: 100vh;
+  min-block-size: calc(100dvh - var(--header-height));
 }
 
-/* When the assistant is open on a wide screen the content column gives up the
-   panel's width rather than being covered by it, so a question can be asked
-   about something that stays visible. */
+/* When the assistant is open on a wide screen the content gives up the panel's
+   width rather than being covered by it, so a question can be asked about
+   something that stays visible. */
 @media (min-width: 900px) {
   .workspace--narrowed {
     padding-inline-end: var(--panel-width);
@@ -30,13 +29,211 @@
   }
 }
 
-/* ----------------------------------------------------------------- rail -- */
+.workspace__body {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+}
+
+/* ================================================== the dataset header == */
+/*
+ * What am I looking at, and can I trust it. Sticky directly under the global
+ * navbar, so both strips move as one object rather than one sliding under the
+ * other.
+ */
+
+.wshead {
+  position: sticky;
+  inset-block-start: var(--header-height);
+  z-index: 30;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+
+  padding: var(--space-2) var(--space-4);
+  /* Fixed, not merely tall enough: the rail below sticks at
+     header-height + this, and the two must agree exactly or the rail's first
+     item spends every scroll half-hidden behind this strip. Everything in
+     here is a single line of known type, so pinning the height costs nothing.
+     Released again below 900px, where the strip wraps and the rail is static
+     anyway. */
+  block-size: var(--dataset-header);
+
+  /* Translucent so content scrolling under it stays faintly visible, which
+     reads as one continuous page rather than two stacked ones. */
+  background: color-mix(in oklab, var(--bg) 88%, transparent);
+  backdrop-filter: saturate(160%) blur(10px);
+  -webkit-backdrop-filter: saturate(160%) blur(10px);
+  border-block-end: 1px solid var(--border);
+}
+
+.wshead__id {
+  min-inline-size: 0;
+}
+
+.wshead__name {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: 1.2;
+  color: var(--fg);
+
+  /* One line then ellipsis: a long filename is common and must not push the
+     health chip off the strip. The full name is in the title attribute. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wshead__shape {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-block-start: 2px;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+.wshead__flag {
+  padding: 0 0.35rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--fg-muted);
+}
+
+.wshead__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: none;
+}
+
+/* -------------------------------------------------------- the health chip */
+/*
+ * The score, the grade word and the serious-issue count in one control that
+ * goes to the report. Colour is carrying meaning here -- the same three bands
+ * the dial uses -- and it is redundant rather than load-bearing, because the
+ * number and the word are both present.
+ */
+
+.wshead__health {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .wshead__health {
+    transition:
+      border-color var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out);
+  }
+}
+
+.wshead__health:hover {
+  border-color: var(--fg);
+  background: var(--bg-inset);
+}
+
+.wshead__health-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+
+.wshead__health-score {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--fg);
+}
+
+/* A 6px dot in the band colour, before the grade word. It is the smallest
+   possible way to say good/fair/poor at a glance without tinting text. */
+.wshead__health-grade {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+
+.wshead__health-grade::before {
+  content: "";
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 50%;
+  background: var(--fg-faint);
+}
+
+.wshead__health[data-band='good'] .wshead__health-grade::before {
+  background: var(--score-good);
+}
+
+.wshead__health[data-band='fair'] .wshead__health-grade::before {
+  background: var(--score-fair);
+}
+
+.wshead__health[data-band='poor'] .wshead__health-grade::before {
+  background: var(--score-poor);
+}
+
+.wshead__health-alert {
+  padding: 0 0.35rem;
+  border-radius: var(--radius-sm);
+  background: var(--danger-100);
+  color: var(--danger-700);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
+.wshead__another {
+  padding: 0.35rem var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.wshead__another:hover {
+  color: var(--fg);
+  border-color: var(--fg);
+}
+
+/* ================================================================ rail == */
 
 .rail {
   position: sticky;
-  inset-block-start: 0;
+  /* Grid items default to min-width:auto, so the rail's own minimum width is
+     the min-content width of the list inside it -- seven labels laid out in a
+     row once the mobile media query turns it horizontal. That is ~600px, and
+     it was silently widening the whole grid column on a 420px screen and
+     scrolling the entire page sideways. Zero lets the list's own
+     overflow-x:auto do the scrolling instead, which is what it is for. */
+  min-inline-size: 0;
+  /* Under the navbar AND the dataset header, both of which are sticky above
+     it, so the offset is the sum of the two -- written as a sum, from tokens,
+     rather than as one number nobody can trace. */
+  inset-block-start: calc(var(--header-height) + var(--dataset-header));
   align-self: start;
-  block-size: 100vh;
+  block-size: calc(100dvh - var(--header-height) - var(--dataset-header));
 
   display: flex;
   flex-direction: column;
@@ -46,37 +243,7 @@
   border-inline-end: 1px solid var(--border);
 }
 
-.rail__file {
-  padding: 0 var(--space-1) var(--space-3);
-  border-block-end: 1px solid var(--border);
-  margin-block-end: var(--space-2);
-}
-
-.rail__filename {
-  margin: 0;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  color: var(--fg);
-  /* Two lines then ellipsis: a long filename is common and must not push the
-     rail wider or run to five lines. */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  overflow-wrap: anywhere;
-}
-
-.rail__shape {
-  margin: 2px 0 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  color: var(--fg-subtle);
-  font-variant-numeric: tabular-nums;
-}
-
 .rail__list {
-  margin: 0;
-  padding: 0;
   list-style: none;
   display: flex;
   flex-direction: column;
@@ -85,6 +252,7 @@
 }
 
 .rail__item {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -92,9 +260,6 @@
   inline-size: 100%;
 
   padding: var(--space-1) var(--space-2);
-
-  background: none;
-  border: none;
   border-radius: var(--radius-sm);
 
   font-family: var(--font-body);
@@ -147,13 +312,13 @@
 }
 
 .rail__item[aria-current='page'] .rail__badge {
-  /* On the filled active row the red badge on near-black is unreadable, so it
+  /* On the filled active row a red badge on near-black is unreadable, so it
      inverts to the row's own foreground. */
   background: var(--accent-fg);
   color: var(--accent);
 }
 
-/* ------------------------------------------------------------ rail foot -- */
+/* ----------------------------------------------------------- rail foot -- */
 
 .rail__foot {
   display: flex;
@@ -174,9 +339,6 @@
 .mode__option {
   flex: 1;
   padding: var(--space-05);
-
-  background: none;
-  border: none;
   border-radius: 3px;
 
   font-family: var(--font-body);
@@ -184,6 +346,14 @@
   font-weight: var(--weight-medium);
   color: var(--fg-subtle);
   cursor: pointer;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mode__option {
+    transition:
+      background-color var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out);
+  }
 }
 
 .mode__option[aria-pressed='true'] {
@@ -197,101 +367,12 @@
   outline-offset: 1px;
 }
 
-.rail__start-over {
-  padding: var(--space-1);
-
-  background: none;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-
-  font-family: var(--font-body);
-  font-size: var(--text-xs);
-  color: var(--fg-muted);
-  cursor: pointer;
-}
-
-.rail__start-over:hover {
-  color: var(--fg);
-  border-color: var(--fg);
-}
-
-.rail__start-over:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-
-/* ----------------------------------------------------------------- main -- */
+/* ================================================================ main == */
 
 .workspace__main {
   min-inline-size: 0;
   display: flex;
   flex-direction: column;
-}
-
-.workspace__bar {
-  position: sticky;
-  inset-block-start: 0;
-  z-index: 20;
-
-  display: flex;
-  justify-content: flex-end;
-  padding: var(--space-2) var(--space-4);
-
-  /* A translucent bar so content scrolling under it stays faintly visible,
-     which reads as one continuous page rather than two stacked ones. */
-  background: color-mix(in oklab, var(--bg) 86%, transparent);
-  backdrop-filter: blur(8px);
-  border-block-end: 1px solid var(--border);
-}
-
-.workspace__ask {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-
-  padding: var(--space-1) var(--space-2);
-
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-pill);
-
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  color: var(--fg);
-  cursor: pointer;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .workspace__ask {
-    transition:
-      border-color var(--dur-fast) var(--ease-out),
-      background-color var(--dur-fast) var(--ease-out);
-  }
-}
-
-.workspace__ask:hover {
-  border-color: var(--fg);
-  background: var(--bg-inset);
-}
-
-.workspace__ask:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-
-.workspace__spark {
-  inline-size: 13px;
-  block-size: 13px;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .workspace__spark {
-    transition: transform var(--dur-normal) var(--ease-spring);
-  }
-  .workspace__ask:hover .workspace__spark {
-    transform: rotate(18deg) scale(1.15);
-  }
 }
 
 .workspace__view {
@@ -317,8 +398,20 @@
  * seven labelled destinations into a hamburger nobody opens.
  */
 @media (max-width: 900px) {
-  .workspace {
+  .workspace__body {
     grid-template-columns: 1fr;
+  }
+
+  .wshead {
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-2);
+    padding: var(--space-2);
+    block-size: auto;
+  }
+
+  .wshead__right {
+    inline-size: 100%;
+    justify-content: space-between;
   }
 
   .rail {
@@ -329,12 +422,6 @@
     padding: var(--space-2);
     border-inline-end: none;
     border-block-end: 1px solid var(--border);
-  }
-
-  .rail__file {
-    padding-block-end: 0;
-    border-block-end: none;
-    margin-block-end: 0;
   }
 
   .rail__list {
@@ -364,20 +451,23 @@
   .workspace__view {
     padding: var(--space-3) var(--space-2);
   }
+}
 
-  .workspace__bar {
-    padding: var(--space-1) var(--space-2);
+@media (max-width: 520px) {
+  .wshead__name {
+    font-size: var(--text-base);
   }
 }
 
-/* The report prints as a document — no shell, no navigation, no bar. */
+/* The report prints as a document -- no shell, no navigation, no header. */
 @media print {
   .rail,
-  .workspace__bar {
+  .wshead {
     display: none;
   }
 
-  .workspace {
+  .workspace,
+  .workspace__body {
     display: block;
     padding-inline-end: 0;
   }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import * as api from '../api'
+import { Spark } from './NavBar'
 import PlotFigure from './PlotFigure'
 import Provenance from './Provenance'
 import './Assistant.css'
@@ -43,6 +44,22 @@ const COLD_PROMPTS = [
   'What kind of files can I use?',
   'What will you actually tell me?',
   'Do I need to know statistics?',
+]
+
+/**
+ * The fallback prompts for a dataset whose suggested questions have not
+ * arrived, or whose analysis produced none.
+ *
+ * They are deliberately generic, because they have to work against any file --
+ * and generic is exactly why they are the FALLBACK. The server's suggestions
+ * name the reader's own columns and have been checked against them, which no
+ * hard-coded list can do, so they win whenever they exist.
+ */
+const WARM_PROMPTS = [
+  'What is the most important thing in my data?',
+  'Find unusual patterns',
+  'Explain this dataset',
+  'What should I investigate?',
 ]
 
 export default function Assistant({
@@ -145,8 +162,11 @@ export default function Assistant({
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
+  const suggested = suggestions.slice(0, 4).map((item) => item.text)
   const prompts = sessionId
-    ? suggestions.slice(0, 3).map((item) => item.text)
+    ? suggested.length > 0
+      ? suggested
+      : WARM_PROMPTS
     : COLD_PROMPTS
 
   return (
@@ -167,14 +187,22 @@ export default function Assistant({
         inert={!open}
       >
         <header className="assistant__head">
-          <div>
-            <p className="assistant__title">AI analyst</p>
+          <div className="assistant__head-text">
+            <p className="assistant__title">
+              <Spark className="assistant__title-spark" />
+              AI Analyst
+            </p>
+            {/* The subtitle names the open file when there is one, because
+                "it already knows what you are looking at" is the difference
+                between this and a chat widget. With no file it states what the
+                panel is for rather than what it lacks -- "No file open yet" is
+                an error message where an invitation belongs. */}
             {filename ? (
               <p className="assistant__context" title={filename}>
-                Looking at {filename}
+                Looking at <strong>{filename}</strong>
               </p>
             ) : (
-              <p className="assistant__context">No file open yet</p>
+              <p className="assistant__context">Ask anything about your data.</p>
             )}
           </div>
           <button
@@ -187,7 +215,16 @@ export default function Assistant({
           </button>
         </header>
 
-        <div className="assistant__scroll" ref={scrollRef}>
+        {/* Before the first question the transcript is one sentence at the top
+            of a tall empty column, which reads as a panel that failed to load
+            something. Centring it makes the greeting the content rather than
+            the residue. */}
+        <div
+          className={`assistant__scroll ${
+            messages.length <= 1 ? 'assistant__scroll--opening' : ''
+          }`.trim()}
+          ref={scrollRef}
+        >
           {messages.map((message, index) => (
             <Message
               key={`${message.role}-${index}`}
@@ -210,11 +247,13 @@ export default function Assistant({
             they do not scroll away the moment a conversation starts. */}
         {prompts.length > 0 && messages.length <= 1 && (
           <div className="assistant__prompts">
-            {prompts.map((prompt) => (
+            <p className="assistant__prompts-label">Try asking</p>
+            {prompts.map((prompt, index) => (
               <button
                 key={prompt}
                 type="button"
                 className="assistant__prompt"
+                style={{ '--i': index }}
                 onClick={() => send(prompt)}
                 disabled={busy}
               >

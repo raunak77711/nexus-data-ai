@@ -45,6 +45,17 @@
   visibility: visible;
 }
 
+/* On a wide screen the panel is a COLUMN beside the page rather than a layer
+   over it, so it starts below the global navbar and the bar stays whole and
+   usable. Below 900px it is a full-height sheet with a scrim, and covering the
+   bar is then the correct behaviour -- there is no room to sit beside. */
+@media (min-width: 900px) {
+  .assistant {
+    inset-block-start: var(--header-height);
+    border-block-start: 1px solid var(--border);
+  }
+}
+
 .assistant__scrim {
   position: fixed;
   inset: 0;
@@ -202,6 +213,10 @@
 }
 
 .bubble__mark {
+  /* Its own line. Provenance renders as a span, so beside an inline "Show me
+     that as a chart" button it wrapped up onto the same row and read as a
+     label ON the button rather than as the mark on the answer. */
+  display: flex;
   margin-block-start: var(--space-1);
 }
 
@@ -247,6 +262,7 @@
 /* ---------------------------------------------------------------- chart -- */
 
 .bubble__chart-button {
+  display: block;
   margin-block-start: var(--space-1);
   padding: var(--space-05) var(--space-1);
 
@@ -488,4 +504,85 @@
   border-color: var(--border);
   color: var(--fg-faint);
   cursor: not-allowed;
+}
+
+/* ------------------------------------------------------- head, refined -- */
+
+.assistant__head-text {
+  /* Lets the filename below actually truncate: without it the flex child
+     refuses to shrink below its content and pushes the close button away. */
+  min-inline-size: 0;
+}
+
+.assistant__title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* The same four-point star as the navbar action and the floating launcher.
+   Three appearances of one glyph is what makes the analyst read as a single
+   thing you can reach from anywhere rather than as three separate buttons. */
+.assistant__title-spark {
+  inline-size: 12px;
+  block-size: 12px;
+  flex: none;
+  color: var(--fg);
+}
+
+.assistant__context strong {
+  font-weight: var(--weight-medium);
+  color: var(--fg-muted);
+}
+
+/* -------------------------------------------------- prompts, refined -- */
+
+.assistant__prompts-label {
+  margin: 0 0 var(--space-05);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .assistant__prompt {
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out),
+      transform var(--dur-fast) var(--ease-out);
+    /* They arrive one after another as the panel settles, so the opening
+       reads as the analyst getting ready rather than as a form appearing. */
+    animation: prompt-in var(--dur-slow) var(--ease-out) both;
+    animation-delay: calc(220ms + var(--i) * 60ms);
+  }
+
+  .assistant__prompt:hover:not(:disabled) {
+    transform: translateX(2px);
+  }
+}
+
+@keyframes prompt-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.assistant__prompt:hover:not(:disabled) {
+  background: var(--bg-elevated);
+}
+
+/* ------------------------------------------------------ the opening turn -- */
+
+.assistant__scroll--opening {
+  justify-content: center;
+}
+
+.assistant__scroll--opening .bubble--assistant {
+  font-size: var(--text-base);
+  line-height: var(--leading-snug);
+  color: var(--fg-muted);
+  text-align: center;
+  padding-inline: var(--space-2);
 }

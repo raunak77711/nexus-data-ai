@@ -63,56 +63,9 @@
   margin-block-start: var(--space-2);
 }
 
-/* ---------------------------------------------------------------- score -- */
-
-.story__score {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex: none;
-
-  padding: var(--space-2);
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  text-align: start;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .story__score {
-    transition:
-      border-color var(--dur-fast) var(--ease-out),
-      background-color var(--dur-fast) var(--ease-out);
-  }
-}
-
-.story__score:hover {
-  border-color: var(--border-strong);
-  background: var(--bg-inset);
-}
-
-.story__score:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-
-.story__score-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.story__score-grade {
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  color: var(--fg);
-}
-
-.story__score-detail {
-  font-size: var(--text-2xs);
-  color: var(--fg-subtle);
-}
+/* The score once lived here as a second dial beside the headline. It is now
+   in the workspace header (see Workspace.css), which shows it on every tab
+   rather than only on this one. */
 
 @media (max-width: 640px) {
   .story__head {
@@ -313,11 +266,14 @@
 
 /* ------------------------------------------------------------------ ask -- */
 
+/* A section marked by a rule, not a filled panel.
+   As a tinted card it was the heaviest object on a page whose whole argument
+   is that findings are sentences rather than tiles -- and it sat directly
+   under five findings that carry no box at all. */
 .story__ask {
   margin-block-start: var(--space-6);
-  padding: var(--space-4);
-  background: var(--bg-inset);
-  border-radius: var(--radius-lg);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--border);
 }
 
 .story__ask-title {
@@ -337,8 +293,10 @@
 }
 
 .story__ask-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  /* Two columns where there is room. Six suggestions in one column is a
+     scroll; in two it is a menu the eye takes in at once. */
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: var(--space-1);
 }
 
@@ -348,8 +306,8 @@
   align-items: flex-start;
   gap: 2px;
 
-  padding: var(--space-2);
-  background: var(--bg);
+  padding: var(--space-1) var(--space-2);
+  background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   cursor: pointer;

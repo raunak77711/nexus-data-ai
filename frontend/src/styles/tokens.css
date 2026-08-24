@@ -248,6 +248,15 @@
   --content-max: 1160px;
   --sidebar-width: 232px;
   --header-height: 60px;
+  /* The Analyze page's dataset strip, which sticks directly under the navbar.
+   * Named because the workspace rail has to stick under BOTH, and a hard-coded
+   * sum in one stylesheet comes unstuck the first time either changes.
+   *
+   * The strip is also SET to this height on wide screens rather than merely
+   * offset by it (see Workspace.css). A token that only guesses the height is
+   * a token that is quietly wrong -- this one was 20px short, and the rail
+   * spent every scroll with its first item sliding under the strip above it. */
+  --dataset-header: 77px;
   --panel-width: 420px;   /* the assistant drawer */
 
   /* ---------------------------------------------------------- provenance --

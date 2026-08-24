@@ -1,0 +1,335 @@
+/**
+ * The About page.
+ *
+ * Set as an essay: one narrow measure for prose, a wider one for the timeline,
+ * and hairline rules between bands instead of cards. The page is making an
+ * argument, and an argument that arrives in boxes reads as a feature list.
+ */
+
+.about {
+  padding-block-end: var(--space-6);
+}
+
+.about__inner {
+  max-inline-size: var(--content-max);
+  margin-inline: auto;
+  padding-inline: var(--space-3);
+}
+
+/* Narrow blocks keep the page's left edge rather than centring themselves in
+   it. Re-centring a 720px column inside a 1160px page puts the hero's left
+   edge 100px right of every section heading below it, which reads as a layout
+   bug rather than as a change of rhythm.
+
+   :where() so this contributes no specificity: blocks with a measure of their
+   own -- the lede at 54ch, prose at 62ch -- keep it, and everything else picks
+   up the default. Without it a two-class selector would silently widen every
+   paragraph on the page to 720px. */
+.about__inner--narrow > :where(*) {
+  max-inline-size: 720px;
+}
+
+.about__band {
+  padding-block: var(--space-7);
+  border-block-start: 1px solid var(--border);
+}
+
+/* ----------------------------------------------------------------- hero -- */
+
+.about__hero {
+  padding-block: var(--space-8) var(--space-7);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .about__hero .about__inner > * {
+    animation: about-in 620ms var(--ease-out) both;
+  }
+  .about__headline { animation-delay: 70ms; }
+  .about__hero .about__lede { animation-delay: 150ms; }
+}
+
+@keyframes about-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+.about__headline {
+  margin-block-start: var(--space-3);
+  font-family: var(--font-display);
+  font-size: var(--text-4xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  line-height: 1.03;
+  color: var(--fg);
+}
+
+.about__lede {
+  margin-block-start: var(--space-3);
+  max-inline-size: 54ch;
+  font-size: var(--text-lg);
+  line-height: var(--leading-snug);
+  color: var(--fg-muted);
+}
+
+/* ------------------------------------------------------------ why nexus -- */
+/* A label column and a body column: the eyebrow sits out in the margin like a
+   running head, which is the one typographic move that makes a web page read
+   as a printed one. */
+
+.about__split {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(0, 3fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.about__band-label {
+  padding-block-start: 0.55rem;
+}
+
+.about__band-body {
+  max-inline-size: 62ch;
+}
+
+.about__statement {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+  color: var(--fg);
+}
+
+/* The second line is the turn in the sentence, and it is the only italic in
+   the product. One exception, spent where the meaning changes. */
+.about__statement em {
+  font-style: italic;
+  color: var(--fg-muted);
+}
+
+.about__prose {
+  margin-block-start: var(--space-3);
+  max-inline-size: var(--measure);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--fg-muted);
+}
+
+.about__band-head {
+  max-inline-size: 34ch;
+  margin-block-end: var(--space-5);
+}
+
+.about__band-title {
+  margin-block-start: var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+}
+
+/* -------------------------------------------------------------- process -- */
+
+.process {
+  position: relative;
+  list-style: none;
+  max-inline-size: 760px;
+}
+
+/* One continuous rule down the left, drawn on the list rather than per item,
+   so it is a single line rather than five segments that never quite meet. */
+.process::before {
+  content: "";
+  position: absolute;
+  inset-block: 0.6rem 0.6rem;
+  inset-inline-start: 3px;
+  inline-size: 1px;
+  background: var(--border-strong);
+  transform-origin: top;
+  transform: scaleY(0);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .process::before {
+    transition: transform 1000ms var(--ease-out);
+  }
+}
+
+.about__band[data-shown] .process::before {
+  transform: scaleY(1);
+}
+
+.process__step {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    'n label'
+    'n detail';
+  column-gap: var(--space-3);
+  padding-inline-start: var(--space-4);
+  padding-block: var(--space-3);
+
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .process__step {
+    transition:
+      opacity var(--dur-slow) var(--ease-out),
+      transform var(--dur-slow) var(--ease-out);
+    transition-delay: calc(160ms + var(--i) * 110ms);
+  }
+}
+
+.about__band[data-shown] .process__step {
+  opacity: 1;
+  transform: none;
+}
+
+.process__marker {
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: calc(var(--space-3) + 0.45rem);
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1.5px solid var(--fg-faint);
+}
+
+.process__step:last-child .process__marker {
+  background: var(--fg);
+  border-color: var(--fg);
+}
+
+.process__n {
+  grid-area: n;
+  align-self: start;
+  padding-block-start: 0.2rem;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  color: var(--fg-faint);
+}
+
+.process__label {
+  grid-area: label;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+}
+
+.process__detail {
+  grid-area: detail;
+  margin-block-start: var(--space-05);
+  max-inline-size: 58ch;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--fg-subtle);
+}
+
+/* ------------------------------------------------------------ guarantee -- */
+
+.about__band--quote {
+  background: var(--bg-sunken);
+}
+
+.about__mark {
+  color: var(--fg);
+  margin-block-end: var(--space-3);
+}
+
+.about__principle {
+  margin-block-start: var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+  color: var(--fg);
+
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .about__principle {
+    transition:
+      opacity var(--dur-slow) var(--ease-out),
+      transform var(--dur-slow) var(--ease-out);
+    transition-delay: 100ms;
+  }
+}
+
+.about__band--quote[data-shown] .about__principle {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------------------------------------------------------------- close -- */
+
+.about__band--close {
+  padding-block: var(--space-7) var(--space-6);
+}
+
+.about__closing {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+  color: var(--fg);
+}
+
+.about__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-block-start: var(--space-4);
+}
+
+.about__cta {
+  padding-inline: var(--space-3);
+}
+
+/* ----------------------------------------------------------- responsive -- */
+
+@media (max-width: 780px) {
+  .about__split {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .about__band-label {
+    padding-block-start: 0;
+  }
+
+  .about__hero {
+    padding-block: var(--space-6) var(--space-5);
+  }
+
+  .about__band {
+    padding-block: var(--space-6);
+  }
+
+  .about__principle {
+    font-size: var(--text-2xl);
+  }
+}
+
+@media (max-width: 560px) {
+  .process__step {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'n'
+      'label'
+      'detail';
+    row-gap: 2px;
+    padding-inline-start: var(--space-3);
+  }
+}

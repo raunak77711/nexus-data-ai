@@ -1,0 +1,158 @@
+/**
+ * The floating analyst launcher.
+ *
+ * Inverted -- ink-filled on a white page, white on a dark one -- because it is
+ * the single most important action in the product and this palette has exactly
+ * one way to say that. Everything else on a page is bordered or plain, so the
+ * one filled thing is unmistakable without a colour being spent on it.
+ */
+
+.launcher {
+  position: fixed;
+  inset-block-end: var(--space-3);
+  inset-inline-end: var(--space-3);
+  z-index: 45;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  padding: 0.7rem var(--space-3);
+
+  background: var(--accent);
+  color: var(--accent-fg);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-md);
+
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-normal);
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .launcher {
+    transition:
+      transform var(--dur-normal) var(--ease-out),
+      opacity var(--dur-normal) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out);
+    /* It arrives shortly after the page rather than with it, so it reads as
+       the product offering help rather than as another element of the layout. */
+    animation: launcher-in 420ms 500ms var(--ease-spring) both;
+  }
+}
+
+@keyframes launcher-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.launcher:hover {
+  background: var(--accent-hover);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .launcher:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.launcher:active {
+  transform: translateY(0);
+}
+
+.launcher:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+/* Out, not gone: it slides away as the panel slides in, and the two together
+   read as one object moving rather than as a swap. */
+.launcher--hidden {
+  opacity: 0;
+  transform: translateY(16px) scale(0.96);
+  pointer-events: none;
+}
+
+.launcher__spark {
+  inline-size: 13px;
+  block-size: 13px;
+  flex: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .launcher__spark {
+    transition: transform var(--dur-slow) var(--ease-spring);
+  }
+  .launcher:hover .launcher__spark {
+    transform: rotate(90deg) scale(1.12);
+  }
+}
+
+.launcher__label {
+  line-height: 1.2;
+}
+
+/* The open filename, revealed on hover on a pointer device.
+   It is a max-inline-size transition rather than a display swap so the button
+   grows into it; appearing at full width would shove the button leftwards. */
+.launcher__context {
+  display: none;
+  max-inline-size: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: color-mix(in oklab, var(--accent-fg) 66%, var(--accent));
+}
+
+@media (hover: hover) and (min-width: 720px) {
+  .launcher__context {
+    display: block;
+    border-inline-start: 1px solid
+      color-mix(in oklab, var(--accent-fg) 30%, var(--accent));
+    padding-inline-start: 0;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .launcher__context {
+      transition:
+        max-inline-size var(--dur-slow) var(--ease-out),
+        padding-inline-start var(--dur-slow) var(--ease-out);
+    }
+  }
+
+  .launcher:hover .launcher__context,
+  .launcher:focus-visible .launcher__context {
+    max-inline-size: 180px;
+    padding-inline-start: 0.5rem;
+  }
+}
+
+/* On a phone the panel covers the screen anyway, and a wide pill in the corner
+   overlaps content. It keeps its label -- an unlabelled bubble reads as a
+   support chat -- but tightens up. */
+@media (max-width: 560px) {
+  .launcher {
+    inset-block-end: var(--space-2);
+    inset-inline-end: var(--space-2);
+    padding: 0.6rem var(--space-2);
+    font-size: var(--text-xs);
+  }
+}
+
+@media print {
+  .launcher {
+    display: none;
+  }
+}

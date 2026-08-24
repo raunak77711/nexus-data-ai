@@ -75,11 +75,13 @@ export default function DatasetsView({ sessionId, filename, onOpen }) {
   return (
     <div className="datasets">
       <header className="datasets__head">
-        <h1 className="datasets__title">Your datasets</h1>
+        <h1 className="datasets__title">Compare against another dataset</h1>
         <p className="datasets__lede">
-          Everything you have added, kept on the server so you can come back to
-          an analysis rather than redoing it. Pick one to compare against the
-          file you have open.
+          Pick a file to measure <strong>{filename}</strong> against. Nexus
+          reports what changed to arrive at the one you have open &mdash;
+          including whether the data itself got better or worse, which is the
+          difference between a number that rose and a number that only looks
+          like it did.
         </p>
       </header>
 
@@ -93,7 +95,15 @@ export default function DatasetsView({ sessionId, filename, onOpen }) {
 
       {datasets?.length === 0 && (
         <p className="datasets__empty">
-          Nothing stored yet. Anything you add appears here.
+          Nothing here yet. Once you have added a second file, this is where
+          you compare them.
+        </p>
+      )}
+
+      {datasets?.length === 1 && datasets[0].id === sessionId && (
+        <p className="datasets__empty">
+          This is the only dataset on the server, so there is nothing to compare
+          it against yet. Add another file and it appears here.
         </p>
       )}
 

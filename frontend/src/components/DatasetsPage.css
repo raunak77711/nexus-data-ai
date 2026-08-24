@@ -1,0 +1,311 @@
+/**
+ * The dataset library.
+ *
+ * A grid, and one of only two places in this app that uses cards. It is the
+ * right shape here for a reason the rest of the product does not share: these
+ * are objects the user owns, they are compared against each other at a glance,
+ * and each carries the same six facts. That is precisely what a card is for --
+ * unlike a finding, which is a sentence and does not want a box around it.
+ */
+
+.library {
+  max-inline-size: var(--content-max);
+  margin-inline: auto;
+  padding: var(--space-7) var(--space-3) var(--space-8);
+}
+
+.library__head {
+  max-inline-size: 52ch;
+  margin-block-end: var(--space-5);
+}
+
+.library__title {
+  margin-block-start: var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+
+.library__lede {
+  margin-block-start: var(--space-2);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--fg-muted);
+}
+
+.library__status {
+  margin-block-end: var(--space-3);
+}
+
+.library__retry {
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+/* ----------------------------------------------------------------- grid -- */
+
+.library__grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: var(--space-2);
+}
+
+.dcard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+
+  padding: var(--space-3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dcard {
+    transition:
+      border-color var(--dur-fast) var(--ease-out),
+      box-shadow var(--dur-normal) var(--ease-out),
+      transform var(--dur-normal) var(--ease-out);
+    animation: dcard-in var(--dur-slow) var(--ease-out) both;
+    animation-delay: calc(var(--i) * 45ms);
+  }
+}
+
+@keyframes dcard-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (hover: hover) {
+  .dcard:not(.dcard--ghost):hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-2px);
+  }
+}
+
+/* The dataset currently open in the workspace. Marked with a heavier border
+   rather than a fill, so the card is still readable and still a card. */
+.dcard[data-current='true'] {
+  border-color: var(--fg);
+}
+
+.dcard__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.dcard__id {
+  min-inline-size: 0;
+}
+
+.dcard__name {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+
+.dcard__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-05);
+  margin-block-start: var(--space-1);
+  min-block-size: 1rem;
+}
+
+.dcard__badge {
+  padding: 1px 0.4rem;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--accent-fg);
+
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.dcard__badge--quiet {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--fg-subtle);
+}
+
+.dcard__score {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 46px;
+  min-block-size: 46px;
+}
+
+.dcard__score-none {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  color: var(--fg-faint);
+}
+
+/* ---------------------------------------------------------------- stats -- */
+
+.dcard__stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+  padding-block: var(--space-2);
+  border-block: 1px solid var(--border);
+}
+
+.dcard__stats dt {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+
+.dcard__stats dd {
+  margin: 2px 0 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--fg);
+}
+
+/* -------------------------------------------------------------- actions -- */
+
+.dcard__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-block-start: auto;
+}
+
+.dcard__open {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.dcard__arrow {
+  display: inline-block;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dcard__arrow {
+    transition: transform var(--dur-normal) var(--ease-out);
+  }
+  .dcard__open:hover .dcard__arrow,
+  .dcard:hover .dcard__arrow {
+    transform: translateX(3px);
+  }
+}
+
+.dcard__remove {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--fg-faint);
+  cursor: pointer;
+}
+
+.dcard__remove:hover:not(:disabled) {
+  color: var(--danger-500);
+}
+
+.dcard__remove:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* -------------------------------------------------------------- loading -- */
+
+.dcard--ghost {
+  gap: var(--space-2);
+  min-block-size: 190px;
+  animation: none;
+}
+
+.dcard__ghost-line {
+  block-size: 12px;
+}
+
+.dcard__ghost-line--title {
+  block-size: 22px;
+  inline-size: 70%;
+}
+
+.dcard__ghost-line--short {
+  inline-size: 45%;
+}
+
+/* ---------------------------------------------------------------- empty -- */
+/* Centred, generous, and carrying the action. An empty state without a way
+   out is a dead end with better typography. */
+
+.library__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+
+  padding: var(--space-8) var(--space-3);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .library__empty > * {
+    animation: dcard-in var(--dur-slow) var(--ease-out) both;
+  }
+  .library__empty-lede { animation-delay: 80ms; }
+  .library__empty-action { animation-delay: 160ms; }
+}
+
+.library__empty-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+}
+
+.library__empty-lede {
+  margin-block-start: var(--space-2);
+  max-inline-size: 40ch;
+  font-size: var(--text-base);
+  color: var(--fg-muted);
+}
+
+.library__empty-action {
+  margin-block-start: var(--space-4);
+  padding-inline: var(--space-4);
+}
+
+@media (max-width: 600px) {
+  .library {
+    padding-block-start: var(--space-5);
+  }
+
+  .library__empty {
+    padding-block: var(--space-6);
+  }
+}
