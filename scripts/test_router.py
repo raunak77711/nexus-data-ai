@@ -3,7 +3,7 @@
 Part 1 calls route() for real. With GOOGLE_API_KEY set that hits Gemini; without
 one it must still return a usable routing marked source="fallback".
 
-Part 2 stubs _call_gemini to prove the parts that only misbehave in production:
+Part 2 stubs _call_model to prove the parts that only misbehave in production:
 fence-stripping, hallucinated-column repair, and an API exception degrading to
 the rules instead of propagating. These cannot be tested against the live API,
 which is exactly why they are the parts most likely to be wrong.
@@ -53,7 +53,7 @@ def part2_stubbed() -> int:
     print(f"\n{'=' * 72}\nPART 2: stubbed LLM responses (failure paths)\n{'=' * 72}")
 
     profile = profile_dataframe(pd.read_csv(os.path.join(SAMPLES, "sales_timeseries.csv")))
-    original = router._call_gemini
+    original = router._call_model
     failures = 0
 
     def check(label: str, condition: bool, detail: str = "") -> None:
@@ -82,7 +82,7 @@ def part2_stubbed() -> int:
 
     try:
         for label, payload in cases.items():
-            router._call_gemini = lambda _s, _k, _p=payload: _p
+            router._call_model = lambda _s, _k, _p=payload: _p
             result = router.route(profile, api_key="stub-key")
             print(f"\n{label}:")
             print(f"  -> archetype={result['archetype']} source={result['source']} "
@@ -99,24 +99,22 @@ def part2_stubbed() -> int:
             else:
                 check(label, result["source"] == "fallback", "degraded, did not raise")
 
-        # An API exception must degrade, not propagate. Raised as the real SDK
-        # class rather than a generic Exception, so this test would fail if the
-        # router's API_ERRORS tuple ever stopped covering the provider's
-        # hierarchy -- which is exactly what an SDK swap is likely to break.
-        def boom(_summary: str, _key: str) -> str:
-            from google.genai import errors as genai_errors
+        # An API exception must degrade, not propagate. Raised as
+        # core.llm.LLMError, which is the one type every provider failure is
+        # normalised to -- so this test now covers a quota error from ANY
+        # provider rather than only from the SDK that happened to be installed.
+        def boom(_summary: str, _key: str = None) -> str:
+            from core.llm import LLMError
 
-            raise genai_errors.ClientError(
-                429, {"error": {"message": "quota exceeded", "status": "RESOURCE_EXHAUSTED"}}
-            )
+            raise LLMError("deepseek returned HTTP 429: quota exceeded")
 
-        router._call_gemini = boom
+        router._call_model = boom
         result = router.route(profile, api_key="stub-key")
         print("\nAPI raises ClientError 429:")
         print(f"  -> archetype={result['archetype']} source={result['source']}")
         check("API error degrades to rules", result["source"] == "fallback")
     finally:
-        router._call_gemini = original
+        router._call_model = original
 
     return failures
 

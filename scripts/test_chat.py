@@ -33,6 +33,7 @@ import pandas as pd
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core import chat  # noqa: E402
+from core import llm  # noqa: E402
 from core.profiler import profile_dataframe  # noqa: E402
 from core.router import rule_based_route  # noqa: E402
 
@@ -133,13 +134,13 @@ def part2_plumbing() -> None:
     frame = fixture()
     profile = profile_dataframe(frame)
     routing = rule_based_route(profile, why="test")
-    original = chat._call_gemini
+    original = chat._call_model
 
     def restore():
-        chat._call_gemini = original
+        chat._call_model = original
 
     # --- a claimed source that was never supplied must be stripped -----------
-    chat._call_gemini = lambda payload, key: json.dumps(
+    chat._call_model = lambda payload, key: json.dumps(
         {
             "answer": "The forecast beat the baseline by 12%.",
             "used": ["profile", "forecast_metrics", "some_block_that_does_not_exist"],
@@ -155,7 +156,7 @@ def part2_plumbing() -> None:
     check("available is True", result["available"] is True)
 
     # --- grounded_on ordering follows the supplied order, not the model's ----
-    chat._call_gemini = lambda payload, key: json.dumps(
+    chat._call_model = lambda payload, key: json.dumps(
         {"answer": "ok", "used": ["routing", "profile"]}
     )
     result = chat.answer("what is this?", profile, routing, api_key="test-key")
@@ -166,7 +167,7 @@ def part2_plumbing() -> None:
     )
 
     # --- an empty used list survives as an empty list ------------------------
-    chat._call_gemini = lambda payload, key: json.dumps(
+    chat._call_model = lambda payload, key: json.dumps(
         {"answer": "I only have the summary, not the rows.", "used": []}
     )
     result = chat.answer("what was row 12?", profile, routing, api_key="test-key")
@@ -174,14 +175,14 @@ def part2_plumbing() -> None:
     check("a declined answer is still available=True", result["available"] is True)
 
     # --- markdown fences are stripped ---------------------------------------
-    chat._call_gemini = lambda payload, key: (
+    chat._call_model = lambda payload, key: (
         '```json\n{"answer": "Fenced but fine.", "used": ["profile"]}\n```'
     )
     result = chat.answer("hi", profile, routing, api_key="test-key")
     check("markdown fences are tolerated", result["reply"] == "Fenced but fine.", result["reply"])
 
     # --- unparseable output must NOT be passed off as an answer -------------
-    chat._call_gemini = lambda payload, key: "Sure! The mean revenue is about 300."
+    chat._call_model = lambda payload, key: "Sure! The mean revenue is about 300."
     result = chat.answer("what is the mean?", profile, routing, api_key="test-key")
     check(
         "non-JSON output is not returned as the answer",
@@ -191,52 +192,61 @@ def part2_plumbing() -> None:
     check("non-JSON output marks chat unavailable", result["available"] is False)
 
     # --- an empty answer field is a failure, not an empty reply -------------
-    chat._call_gemini = lambda payload, key: json.dumps({"answer": "  ", "used": ["profile"]})
+    chat._call_model = lambda payload, key: json.dumps({"answer": "  ", "used": ["profile"]})
     result = chat.answer("hello", profile, routing, api_key="test-key")
     check("an empty answer is treated as a failure", result["available"] is False)
     check("an empty answer reports no sources", result["grounded_on"] == [])
 
     # --- an API exception degrades to unavailable, never to a guess ---------
-    if chat.API_ERRORS:
-        error_class = chat.API_ERRORS[0]
+    # Raised as core.llm.LLMError because that is now the ONE type every
+    # provider failure arrives as. The old version of this test constructed a
+    # google-genai exception class, which meant the test could only prove the
+    # app survived a Gemini outage -- and would have gone green while a
+    # DeepSeek outage crashed the request.
+    def boom(payload, key):
+        raise llm.LLMError("simulated outage")
 
-        def boom(payload, key):
-            raise error_class("simulated outage", {"error": {"code": 503}}, None)
-
-        chat._call_gemini = boom
-        try:
-            result = chat.answer("anything", profile, routing, api_key="test-key")
-        except Exception as exc:  # noqa: BLE001 - the point is that this cannot happen
-            check("an API error does not propagate", False, f"{type(exc).__name__}: {exc}")
-            result = {"available": None, "grounded_on": None, "reply": ""}
-        check("an API error is caught", result["available"] is False)
-        check("an API error yields no sources", result["grounded_on"] == [])
-        check("the unavailable message says so", "unavailable" in result["reply"].lower())
-    else:
-        check("SDK present so API_ERRORS is populated", False, "google-genai not importable")
+    chat._call_model = boom
+    try:
+        result = chat.answer("anything", profile, routing, api_key="test-key")
+    except Exception as exc:  # noqa: BLE001 - the point is that this cannot happen
+        check("an API error does not propagate", False, f"{type(exc).__name__}: {exc}")
+        result = {"available": None, "grounded_on": None, "reply": ""}
+    check("an API error is caught", result["available"] is False)
+    check("an API error yields no sources", result["grounded_on"] == [])
+    check("the unavailable message says so", "unavailable" in result["reply"].lower())
 
     restore()
 
     # --- no key at all -------------------------------------------------------
-    saved = os.environ.pop("GOOGLE_API_KEY", None)
+    # Which variable to unset depends on the configured provider, so it is
+    # asked for rather than hard-coded. The previous version popped
+    # GOOGLE_API_KEY unconditionally, which silently stopped testing anything
+    # the moment the app was pointed at a different provider: the key was still
+    # set, a model still answered, and the assertion that no key produces a
+    # refusal was being made against a run that had one.
+    key_var = {"deepseek": "DEEPSEEK_API_KEY", "gemini": "GOOGLE_API_KEY"}.get(
+        llm.PROVIDER, "GOOGLE_API_KEY"
+    )
+    saved = os.environ.pop(key_var, None)
     try:
         result = chat.answer("anything", profile, routing)
         check("no API key -> unavailable, not a guess", result["available"] is False)
         check("no API key -> no sources claimed", result["grounded_on"] == [])
         check(
             "no API key -> the message names the cause",
-            "GOOGLE_API_KEY" in result["reply"],
+            key_var in result["reply"],
             result["reply"],
         )
     finally:
         if saved is not None:
-            os.environ["GOOGLE_API_KEY"] = saved
+            os.environ[key_var] = saved
 
     # --- an empty question is answered locally, without a call --------------
     def must_not_be_called(payload, key):
         raise AssertionError("the model was called for an empty question")
 
-    chat._call_gemini = must_not_be_called
+    chat._call_model = must_not_be_called
     result = chat.answer("   ", profile, routing, api_key="test-key")
     check("an empty question does not reach the model", result["available"] is True)
     restore()
