@@ -41,40 +41,64 @@ The defence is structural, not a matter of asking nicely:
     used "forecast_metrics" when no forecast has been run is exactly the kind of
     confident nonsense the UI must not repeat.
 
- 5. FAILURE IS SILENCE, NOT A FALLBACK. If the API is unreachable the answer is
-    "chat is unavailable". There is deliberately no rule-based fallback
-    answerer, because anything that constructed an answer without the model
-    would be guessing at what was asked -- and a guess is the failure mode this
-    module exists to prevent.
+ 5. FAILURE IS SILENCE, NOT INVENTION. If the API is unreachable, nothing
+    fabricates prose in its place. What CAN still happen without a model is a
+    calculation -- see THE CALCULATOR below -- because a computed number is not
+    a guess at what was asked, it is an answer to a question that was
+    recognised. What never happens is an explanation assembled around numbers
+    nobody computed.
+
+THE CALCULATOR (added after the rules above, and consistent with all of them)
+----------------------------------------------------------------------------
+Rules 1 and 2 make the assistant trustworthy and also make it unable to answer
+"which region sells most?" -- a question whose answer is a real number that is
+not in any summary. The fix is NOT to relax them. It is to give the model a
+calculator it can point at but cannot reach into:
+
+    question -> the model PICKS A TOOL from a fixed menu (core.tools)
+             -> the CALLER runs that tool against the DataFrame
+             -> real numbers come back
+             -> the model writes the sentence around them
+
+Three things about that flow matter. First, the model still never sees a row: it
+sees column names and types when planning, and computed results afterwards.
+Second, this module still cannot reach the data -- the caller passes in a
+`compute` function, so there is no DataFrame in scope here, and the guarantee
+remains a property of the signature rather than of anyone's discipline. Third,
+the numbers in the answer were produced by pandas, not by the model, which is
+exactly the division of labour rule 2 was protecting.
+
+When no model is available, the caller's `plan_locally` reads the question with
+keyword rules instead. A recognised question then gets the *same* computed
+answer with templated wording; an unrecognised one gets an honest "I could not
+work out what to calculate". Chat degrades in fluency, not in truthfulness.
 
 WHAT IS DISCLOSED, STATED HONESTLY: the profile carries per-column min/max/mean
 and up to ten example values for each categorical column. Those examples are
 real cell contents. They are a bounded, low-cardinality vocabulary that the UI
 already displays on screen, and core.router already sends three of them per
-column, so this is a known and accepted disclosure rather than an oversight. No
-numeric, text, date or coordinate cell is ever sent.
+column, so this is a known and accepted disclosure rather than an oversight. A
+tool result may also contain values the calculation produced -- the names of the
+top five regions, the row numbers of five outliers -- which is the same class of
+disclosure and is the answer the user asked for. No column of raw cells is ever
+sent.
 
-Provider: Google Gemini via google-genai, same SDK pattern and same failure
-handling as core.router -- see that module for why the imports and the except
-clauses are shaped this way.
+Provider: whichever one core.llm is configured for. This module names no
+vendor and imports no SDK. It asks core.llm for a completion and handles the
+one exception type core.llm raises, so an assistant that keeps working when
+the provider changes is a property of the architecture rather than of a
+future edit remembering to update two files.
 """
 
 from __future__ import annotations
 
 import json
 import logging
-import os
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
-from dotenv import load_dotenv
+from core import llm
 
 logger = logging.getLogger(__name__)
-
-load_dotenv()
-
-# Same model and SDK as core.router: this is a small, cheap, well-bounded task
-# over a few hundred tokens of JSON, which is what the flash tier is for.
-MODEL = "gemini-3.6-flash"
 
 # Larger than the router's 1000 because this produces prose rather than a
 # classification, but still a cap: an answer longer than a few paragraphs about
@@ -106,20 +130,6 @@ UNAVAILABLE_MESSAGE = (
     "Everything else on this page - the profile, the routing, the charts, the "
     "code and the forecast - is computed locally and is unaffected."
 )
-
-try:
-    from google import genai
-    from google.genai import errors as genai_errors
-    from google.genai import types as genai_types
-    import httpx
-
-    SDK_IMPORT_ERROR: Optional[str] = None
-    API_ERRORS: tuple = (genai_errors.APIError, httpx.HTTPError)
-except ImportError as _exc:  # pragma: no cover - depends on install state
-    genai = None
-    SDK_IMPORT_ERROR = str(_exc)
-    API_ERRORS = ()
-
 
 SYSTEM_PROMPT = """You answer questions about a dataset a user has uploaded to a \
 data-visualisation tool.
@@ -159,6 +169,59 @@ Respond with raw JSON only, no code fences, exactly this shape:
 
 "used" must contain only names of blocks present in the CONTEXT you were given.
 If you could not answer from the context, return an empty "used" list."""
+
+
+PLANNER_PROMPT = """You decide what a data app should CALCULATE in order to \
+answer a user's question. You do not answer the question yourself.
+
+You are given the list of TOOLS the app can run, and the COLUMNS of the dataset
+(names and kinds only — never any values).
+
+Pick the single tool that would produce the number the user is asking for, and
+fill in its arguments using column names EXACTLY as they appear in COLUMNS.
+
+RULES:
+1. Only ever name a column that is in COLUMNS. Never invent one, never guess at
+   one that "should" exist.
+2. Only ever name a tool that is in TOOLS.
+3. If no tool would answer the question — the user is asking something the data
+   cannot address, or is making conversation — return {"tool": null}. That is a
+   correct answer and is expected regularly.
+4. Prefer the most specific tool. "Which region is best?" is `rank`, not
+   `overview`.
+5. Do not attempt to answer, explain or calculate. Your entire output is the
+   choice.
+
+Respond with raw JSON only, no code fences, exactly this shape:
+{"tool": "<tool name or null>", "args": {...}, "why": "<one short clause>"}"""
+
+
+EXPLAIN_PROMPT = """You explain a calculation to someone with no background in \
+data or statistics.
+
+The app has already run a calculation over the user's dataset. You are given the
+QUESTION they asked, the RESULT the calculation produced, and background CONTEXT
+about the dataset.
+
+ABSOLUTE RULES — these override every other consideration:
+
+1. Every number you state must be copied from RESULT or CONTEXT. You must not
+   calculate anything, including percentages, differences, ratios or totals that
+   are not already there. If a number would be useful and is not present, leave
+   it out.
+2. Answer the question that was asked, using the result. Lead with the answer,
+   not with a description of the method.
+3. If RESULT does not actually answer the question, say so plainly and say what
+   it does show. That is a correct outcome.
+4. No jargon. Not "correlation coefficient" — "they move together". Not
+   "aggregation" — "total". Not "outlier" — "unusual". The reader does not know
+   these words and should not have to.
+
+STYLE: two or three sentences. Plain language, specific numbers, no headings, no
+bullet lists, no markdown. Do not repeat the whole result back.
+
+Respond with raw JSON only, no code fences, exactly this shape:
+{"answer": "..."}"""
 
 
 def _compact_columns(profile: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], int]:
@@ -311,32 +374,174 @@ def _validate_used(claimed: Any, supplied: Sequence[str]) -> List[str]:
     return [block for block in supplied if block in named]
 
 
-def _call_gemini(payload: str, api_key: str) -> str:
-    """Send the context and question to Gemini and return the raw response text.
+def _call_model(
+    payload: str,
+    api_key: Optional[str] = None,
+    system_prompt: str = SYSTEM_PROMPT,
+    max_tokens: int = MAX_TOKENS,
+) -> str:
+    """Send a payload under a given system prompt and return the raw text.
 
-    Isolated for the same reason as core.router._call_gemini: every
-    provider-specific detail lives in one function, so changing provider is a
-    rewrite of this and nothing else.
+    Kept as a named function even though it now forwards to core.llm: it is the
+    seam scripts/test_chat.py replaces, and it is where this module's request
+    settings live. The system prompt is a parameter because this module makes
+    three different kinds of request -- plan, explain, answer-from-summaries --
+    and they differ in nothing else.
+
+    JSON mode throughout. All three prompts end by specifying an exact object
+    shape, and every caller parses and validates what comes back, so a provider
+    honouring the flag is a convenience rather than a load-bearing assumption.
     """
-    client = genai.Client(api_key=api_key)
-    response = client.models.generate_content(
-        model=MODEL,
-        contents=payload,
-        config=genai_types.GenerateContentConfig(
-            system_instruction=SYSTEM_PROMPT,
-            max_output_tokens=MAX_TOKENS,
-            temperature=TEMPERATURE,
-            response_mime_type="application/json",
-            # No tools. Stated explicitly rather than left to the default,
-            # because "the model cannot compute anything" is a load-bearing
-            # claim of this module and should be visible in the code that makes
-            # the request.
-            automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(
-                disable=True
-            ),
-        ),
+    return llm.complete(
+        payload,
+        system_prompt,
+        max_tokens=max_tokens,
+        temperature=TEMPERATURE,
+        json_mode=True,
+        api_key_override=api_key,
     )
-    return response.text or ""
+
+
+def _parse_json_reply(raw: str) -> Dict[str, Any]:
+    """Parse a model reply that is contractually a JSON object, or raise."""
+    parsed = json.loads(_strip_code_fences(raw))
+    if not isinstance(parsed, dict):
+        raise ValueError(f"expected a JSON object, got {type(parsed).__name__}")
+    return parsed
+
+
+def plan_with_model(
+    question: str,
+    catalogue: Dict[str, Any],
+    history: Sequence[Dict[str, str]],
+    api_key: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    """Ask the model which calculation would answer the question.
+
+    Args:
+        question: the user's question.
+        catalogue: core.tools.catalogue output -- the tool menu and the column
+            names. No values.
+        history: recent turns, so "and the worst one?" can resolve.
+        api_key: the provider key.
+
+    Returns:
+        {"tool": str, "args": dict} or None when no tool fits, the model said so,
+        or anything at all went wrong. None is the safe outcome: it falls through
+        to answering from summaries, which is the pre-existing behaviour.
+
+    The returned plan is NOT trusted. core.tools validates every column name and
+    every argument against the frame before running anything, and refuses what it
+    cannot resolve -- the same trust-but-verify pattern core.router applies to a
+    proposed archetype.
+    """
+    payload = json.dumps(
+        {
+            "TOOLS": catalogue.get("tools", {}),
+            "COLUMNS": catalogue.get("columns", []),
+            "N_ROWS": catalogue.get("n_rows"),
+            "CONVERSATION_SO_FAR": _trim_history(history or []),
+            "QUESTION": question,
+        },
+        default=str,
+    )
+
+    try:
+        parsed = _parse_json_reply(
+            _call_model(payload, api_key, system_prompt=PLANNER_PROMPT, max_tokens=400)
+        )
+    except (json.JSONDecodeError, ValueError, TypeError, AttributeError) as exc:
+        logger.warning("Could not parse plan: %s", exc)
+        return None
+    except llm.LLMError as exc:
+        logger.warning("Planning call failed: %s", exc)
+        return None
+
+    tool = parsed.get("tool")
+    if not tool or not isinstance(tool, str):
+        return None
+    args = parsed.get("args")
+    return {"tool": tool, "args": args if isinstance(args, dict) else {}}
+
+
+def _explain_result(
+    question: str,
+    tool_result: Dict[str, Any],
+    context: Dict[str, Any],
+    history: Sequence[Dict[str, str]],
+    api_key: str,
+) -> Optional[str]:
+    """Have the model write the sentence around numbers it did not produce.
+
+    Returns None on any failure, and the caller then uses the tool's own
+    templated summary. That fallback is the reason this step is allowed to be a
+    network call at all: the answer already exists before the model is asked,
+    so the model is an improvement to the wording and never a dependency for
+    the fact.
+    """
+    payload = json.dumps(
+        {
+            "QUESTION": question,
+            "RESULT": {
+                "calculation": tool_result.get("tool"),
+                "numbers": tool_result.get("result"),
+                "plain_summary": tool_result.get("summary"),
+            },
+            "CONTEXT": context,
+            "CONVERSATION_SO_FAR": _trim_history(history or []),
+        },
+        default=str,
+    )
+
+    try:
+        parsed = _parse_json_reply(
+            _call_model(payload, api_key, system_prompt=EXPLAIN_PROMPT)
+        )
+    except (json.JSONDecodeError, ValueError, TypeError, AttributeError) as exc:
+        logger.warning("Could not parse explanation: %s", exc)
+        return None
+    except llm.LLMError as exc:
+        logger.warning("Explanation call failed: %s", exc)
+        return None
+
+    reply = str(parsed.get("answer") or "").strip()
+    return reply or None
+
+
+
+def _reply(
+    text: str,
+    grounded_on: Optional[Sequence[str]] = None,
+    available: bool = True,
+    answered_by: str = "summaries",
+    tool: Optional[str] = None,
+    action: Optional[Dict[str, Any]] = None,
+    table: Optional[Dict[str, Any]] = None,
+    data: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """One response shape for every path out of answer().
+
+    Written as a constructor rather than repeated dict literals because there
+    are now seven ways out of answer(), and a field missing from one of them
+    would surface in React as `undefined` on a rare branch -- the kind of bug
+    that only ever appears in front of an audience.
+
+    answered_by is the honest label the UI shows next to the reply:
+      "computed"    -- the numbers came from pandas, the wording is templated
+      "model"       -- the numbers came from pandas, the wording from the model
+      "summaries"   -- answered from cached statistics, no fresh calculation
+      "unavailable" -- no answer was produced
+    """
+    return {
+        "reply": text,
+        "grounded_on": list(grounded_on or []),
+        "available": available,
+        "answered_by": answered_by,
+        "tool": tool,
+        "action": action,
+        "table": table,
+        "data": data,
+    }
 
 
 def answer(
@@ -349,8 +554,11 @@ def answer(
     world_warnings: Optional[Sequence[str]] = None,
     forecast: Optional[Dict[str, Any]] = None,
     api_key: Optional[str] = None,
+    compute: Optional[Callable[[str, Dict[str, Any]], Dict[str, Any]]] = None,
+    plan_locally: Optional[Callable[[str], Optional[Dict[str, Any]]]] = None,
+    catalogue: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Answer a question about a dataset from its computed summaries alone.
+    """Answer a question about a dataset, computing the number where one is needed.
 
     Args:
         message: the user's question.
@@ -361,28 +569,31 @@ def answer(
         world_stats / world_archetype / world_warnings: the built chart's stats,
             if the user has one on screen.
         forecast: forecast metrics, if one has been run.
-        api_key: overrides GOOGLE_API_KEY. For tests and for a future server
-            holding one key per request.
+        api_key: overrides the provider key in the environment. For tests and
+            for a future server holding one key per request.
+        compute: ``(tool_name, args) -> core.tools.run(...) result``. Supplied by
+            the caller, which holds the DataFrame. Note what this parameter is
+            NOT: it is not the frame, and not a way to reach one. This module can
+            ask for a calculation and read the answer; it cannot read a row.
+        plan_locally: ``(question) -> {"tool", "args"} | None``. The keyword
+            planner, bound by the caller to the same frame. Used when there is no
+            model, and when the model declines or names a column that does not
+            resolve.
+        catalogue: core.tools.catalogue output -- the tool menu and the column
+            names, for the model's planning step.
 
     Returns:
-        {"reply": str, "grounded_on": [str], "available": bool}.
-
-        available is False when the model could not be reached. In that case
-        reply says so and grounded_on is empty -- there is deliberately no
-        degraded answering path, because the only thing a fallback could do is
-        guess, and guessing is the failure this module exists to prevent.
+        See _reply() for the shape. Every field is always present.
 
     Like core.router.route, this function is contractually non-raising: chat is
     an accessory to the page, and an outage must not take the page down.
     """
     question = str(message or "").strip()
     if not question:
-        return {
-            "reply": "Ask me something about this dataset and I will answer from "
-                     "the profile, the routing and the computed statistics.",
-            "grounded_on": [],
-            "available": True,
-        }
+        return _reply(
+            "Ask me anything about this dataset — what is in it, what is going "
+            "up, which group is doing best, or what looks unusual."
+        )
 
     context, blocks = build_context(
         profile=profile,
@@ -393,23 +604,120 @@ def answer(
         forecast=forecast,
     )
 
-    if genai is None:
-        logger.info("google-genai not importable; chat unavailable")
-        return {"reply": UNAVAILABLE_MESSAGE, "grounded_on": [], "available": False}
+    # One question, asked once: is a model reachable at all? core.llm knows
+    # which provider is configured, whether its client library imported and
+    # whether a key is set. This module used to answer that itself by naming a
+    # vendor -- which is how AI_PROVIDER=deepseek turned the assistant off.
+    key = api_key
+    have_model = llm.available(key)
 
-    key = api_key or os.getenv("GOOGLE_API_KEY")
-    if not key:
-        logger.info("No GOOGLE_API_KEY found; chat unavailable")
-        return {
-            "reply": (
-                "The assistant needs a GOOGLE_API_KEY to run and none is "
-                "configured, so I cannot answer questions. Everything else on "
-                "this page is computed locally and works without it."
-            ),
-            "grounded_on": [],
-            "available": False,
-        }
+    # ---------------------------------------------------------- 1. plan ----
+    # The model plans when there is one, because it resolves phrasings rules
+    # cannot ("which part of the business is doing worst"). The keyword planner
+    # is the fallback in BOTH directions: no model at all, and a model that
+    # declined to pick anything.
+    plan: Optional[Dict[str, Any]] = None
+    local_plan: Optional[Dict[str, Any]] = None
+    if plan_locally is not None:
+        try:
+            local_plan = plan_locally(question)
+        except (ValueError, TypeError, KeyError) as exc:
+            logger.warning("Keyword planner failed: %s", exc)
 
+    # Rules first WHEN THEY ARE SURE. A question that names its own subject
+    # ("which region has the highest revenue") is one the rules read correctly,
+    # and spending a network round trip to have a model agree costs latency and
+    # -- on a rate-limited free tier -- an entire request from the budget. Where
+    # the rules had to guess at the subject, the model earns its round trip.
+    if local_plan and local_plan.get("confident"):
+        plan = local_plan
+    elif have_model and catalogue and compute is not None:
+        plan = plan_with_model(question, catalogue, history or [], key) or local_plan
+    else:
+        plan = local_plan
+
+    # ------------------------------------------------------- 2. compute ----
+    tool_result: Optional[Dict[str, Any]] = None
+    if plan and compute is not None:
+        tool_result = compute(plan.get("tool"), plan.get("args") or {})
+        if not tool_result.get("ok") and plan_locally is not None:
+            # A refused plan is not a dead end. The model may have named a
+            # column that does not resolve, while the keyword planner still
+            # recognises the question -- so try that before giving up on
+            # computing anything at all.
+            logger.info(
+                "Plan refused (%s): %s", plan.get("tool"), tool_result.get("error")
+            )
+            second = plan_locally(question)
+            if second and second != plan:
+                retry = compute(second.get("tool"), second.get("args") or {})
+                if retry.get("ok"):
+                    tool_result = retry
+
+    # ------------------------------------------------------- 3. explain ----
+    if tool_result is not None and tool_result.get("ok"):
+        grounded = [f"computed_{tool_result['tool']}"]
+
+        if have_model:
+            phrased = _explain_result(question, tool_result, context, history or [], key)
+            if phrased:
+                return _reply(
+                    phrased,
+                    grounded_on=grounded,
+                    answered_by="model",
+                    tool=tool_result["tool"],
+                    action=tool_result.get("action"),
+                    table=tool_result.get("table"),
+                    data=tool_result.get("result"),
+                )
+
+        # No model, or the model failed. The tool has already written a sentence
+        # that is true; using it is not a degraded answer, only a plainer one.
+        return _reply(
+            tool_result["summary"],
+            grounded_on=grounded,
+            answered_by="computed",
+            tool=tool_result["tool"],
+            action=tool_result.get("action"),
+            table=tool_result.get("table"),
+            data=tool_result.get("result"),
+        )
+
+    # ------------------------------ 4. nothing computed; fall back ---------
+    if not have_model:
+        # No model to write prose from the summaries, and no calculation
+        # applied. Two things are worth saying, and both of them are:
+        #
+        #   * WHY. "The assistant is unavailable" without a cause is the kind of
+        #     message that sends someone hunting through logs for a bug that is
+        #     really an unset variable.
+        #   * WHAT CAN STILL BE ASKED. Calculations do not need the model, so
+        #     the door is not closed -- but a user who does not know the
+        #     vocabulary cannot rephrase into it unaided, so it is shown.
+        # core.llm.status() already phrases the cause -- unimplemented
+        # provider, missing client library, absent key -- so there is one
+        # sentence to maintain rather than a branch per failure mode.
+        cause = (
+            f"I cannot answer in my own words right now. {llm.status()['reason']} "
+        )
+
+        refusal = tool_result.get("error") if tool_result else None
+        if refusal:
+            cause += f"{refusal} "
+
+        return _reply(
+            cause
+            + "I can still calculate things directly from your data — try naming "
+            + "a column, for example “which region has the highest revenue”, "
+            + "“is revenue going up”, “find unusual rows”, or “summarise this "
+            + "dataset”. Everything else on this page is computed locally and "
+            + "works without a key.",
+            available=False,
+            answered_by="unavailable",
+        )
+
+    # A model is available and no calculation applied. Answer from the cached
+    # summaries -- this module's original behaviour, unchanged.
     payload = json.dumps(
         {
             "CONTEXT": context,
@@ -421,20 +729,15 @@ def answer(
     )
 
     try:
-        raw = _call_gemini(payload, key)
-        parsed = json.loads(_strip_code_fences(raw))
-        if not isinstance(parsed, dict):
-            raise ValueError(f"expected a JSON object, got {type(parsed).__name__}")
-
+        parsed = _parse_json_reply(_call_model(payload, key))
         reply = str(parsed.get("answer") or "").strip()
         if not reply:
             raise ValueError("model returned an empty answer")
-
-        return {
-            "reply": reply,
-            "grounded_on": _validate_used(parsed.get("used"), blocks),
-            "available": True,
-        }
+        return _reply(
+            reply,
+            grounded_on=_validate_used(parsed.get("used"), blocks),
+            answered_by="summaries",
+        )
 
     except (json.JSONDecodeError, ValueError, TypeError, AttributeError) as exc:
         # The model replied but not to the contract. Note that this is NOT
@@ -442,14 +745,12 @@ def answer(
         # output that skipped the instructions, and the grounding rules are in
         # those instructions.
         logger.warning("Could not parse chat response: %s", exc)
-        return {
-            "reply": (
-                "I got a reply I could not read, so I am not going to guess at "
-                "what it said. Please ask again."
-            ),
-            "grounded_on": [],
-            "available": False,
-        }
-    except API_ERRORS as exc:
-        logger.warning("Gemini chat call failed (%s): %s", type(exc).__name__, exc)
-        return {"reply": UNAVAILABLE_MESSAGE, "grounded_on": [], "available": False}
+        return _reply(
+            "I got a reply I could not read, so I am not going to guess at what "
+            "it said. Please ask again.",
+            available=False,
+            answered_by="unavailable",
+        )
+    except llm.LLMError as exc:
+        logger.warning("Chat model call failed: %s", exc)
+        return _reply(UNAVAILABLE_MESSAGE, available=False, answered_by="unavailable")

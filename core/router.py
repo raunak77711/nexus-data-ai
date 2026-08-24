@@ -13,61 +13,29 @@ never as a consumer of the raw data. That choice is deliberate:
   adds semantic judgement ("revenue" is a better target than "order_id"), so
   when it is unavailable the app must still work, just less cleverly.
 
-Provider: Google Gemini via the google-genai SDK -- Google's supported client,
-which replaces the end-of-life google-generativeai package. Provider details are
-confined to _call_gemini() and the import block, so swapping SDKs again is a
-two-place change.
+Provider: whichever one core.llm is configured for -- DeepSeek by default,
+Gemini when AI_PROVIDER says so. This module does not know which. It hands
+core.llm a summary and a system prompt and gets back a string, which is the
+only shape of coupling to a vendor that survives the vendor changing.
 """
 
 from __future__ import annotations
 
 import json
 import logging
-import os
 import re
 from typing import Any, Dict, List, Optional
 
-from dotenv import load_dotenv
+from core import llm
 
 logger = logging.getLogger(__name__)
 
-load_dotenv()
-
-# gemini-2.0-flash was retired server-side and now 404s with an explicit
-# "no longer available" message, so the model id is a live dependency, not a
-# free choice. Flash rather than Pro because this is a three-way classification
-# over a few hundred tokens -- the cheapest, fastest tier is the right one, and
-# Pro's extra reasoning buys nothing here.
-MODEL = "gemini-3.6-flash"
 MAX_TOKENS = 1000
 
 TIMESERIES = "timeseries"
 GEO = "geo"
 TABULAR = "tabular"
 ARCHETYPES = (TIMESERIES, GEO, TABULAR)
-
-# Imported at module scope so the SDK's exception classes can be named in an
-# except clause. A missing SDK is a legitimate deployment state -- the app still
-# runs rule-based -- so the failure is recorded rather than raised.
-try:
-    from google import genai
-    from google.genai import errors as genai_errors
-    from google.genai import types as genai_types
-    import httpx
-
-    SDK_IMPORT_ERROR: Optional[str] = None
-    # errors.APIError is the root of google-genai's service hierarchy (auth,
-    # quota, safety block, 5xx) -- ClientError and ServerError both derive from
-    # it. httpx.HTTPError is included because google-genai raises the raw
-    # transport exception for DNS/connect/read timeouts rather than wrapping
-    # it; without it a flaky network would crash the app instead of degrading.
-    # Naming these catches every *provider* failure while letting genuine
-    # programming errors in this module propagate and be fixed.
-    API_ERRORS: tuple = (genai_errors.APIError, httpx.HTTPError)
-except ImportError as _exc:  # pragma: no cover - depends on install state
-    genai = None
-    SDK_IMPORT_ERROR = str(_exc)
-    API_ERRORS = ()
 
 # Numeric columns whose names look like identifiers make terrible chart targets:
 # plotting a monotonically increasing key tells you nothing. Used only by the
@@ -259,45 +227,27 @@ def _validate(candidate: Dict[str, Any], profile: Dict[str, Any]) -> Optional[Di
     return resolved
 
 
-def _call_gemini(summary: str, api_key: str) -> str:
-    """Send the schema summary to Gemini and return the raw response text.
+def _call_model(summary: str, api_key: Optional[str] = None) -> str:
+    """Send the schema summary to the configured model, return its raw text.
 
-    Isolated from route() so every provider-specific detail -- SDK surface,
-    model name, generation config -- lives in one place. Swapping to a
-    different provider means rewriting this function and nothing else.
+    A one-line wrapper over core.llm.complete, kept as a named function for two
+    reasons. It is the seam scripts/test_router.py replaces to exercise the
+    failure paths without a network, and it is where this module's request
+    settings live: temperature 0.0 because this is classification and must be
+    repeatable, and JSON mode because the reply is contractually an object.
 
-    WHY a client is constructed per call rather than cached at module scope:
-    the api_key is a per-call argument (route() accepts an override so a future
-    multi-tenant server can hold one key per request). A module-level client
-    would silently pin the first key it ever saw. Construction is local object
-    setup, not a network round-trip, so the cost is negligible next to the call.
-
-    response_mime_type='application/json' asks Gemini to constrain its decoding
-    to valid JSON. That is a stronger guarantee than a prompt instruction, but
-    the caller still strips fences and still validates, because a server-side
-    guarantee is not something to stake the whole pipeline on.
+    The caller still strips fences and still validates every field against the
+    profile. A server-side JSON guarantee is worth having and is not worth
+    staking the pipeline on.
     """
-    client = genai.Client(api_key=api_key)
-    response = client.models.generate_content(
-        model=MODEL,
-        contents=summary,
-        config=genai_types.GenerateContentConfig(
-            system_instruction=SYSTEM_PROMPT,
-            max_output_tokens=MAX_TOKENS,
-            temperature=0.0,  # classification, not creative writing: be repeatable
-            response_mime_type="application/json",
-            # No tools are supplied, so the SDK's automatic function-calling
-            # loop can only add a warning and a wasted branch. Disabling it
-            # states the intent: one request, one answer, no agentic loop.
-            automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(
-                disable=True
-            ),
-        ),
+    return llm.complete(
+        summary,
+        SYSTEM_PROMPT,
+        max_tokens=MAX_TOKENS,
+        temperature=0.0,
+        json_mode=True,
+        api_key_override=api_key,
     )
-    # .text is None (not "") when a candidate was blocked or returned no parts;
-    # returning "" lets the caller's json.loads fail into the normal fallback
-    # path instead of raising TypeError from a None.
-    return response.text or ""
 
 
 def route(profile: Dict[str, Any], api_key: Optional[str] = None) -> Dict[str, Any]:
@@ -305,9 +255,9 @@ def route(profile: Dict[str, Any], api_key: Optional[str] = None) -> Dict[str, A
 
     Args:
         profile: output of core.profiler.profile_dataframe.
-        api_key: overrides GOOGLE_API_KEY from the environment. Provided for
-            tests and for a future server that holds keys per request rather
-            than per process.
+        api_key: accepted for the callers that pass one, and for a future
+            server holding keys per request rather than per process. The key
+            actually used is resolved by core.llm from the environment.
 
     Returns:
         A dict with archetype, time_col, entity_col, target_col, lat_col,
@@ -317,24 +267,26 @@ def route(profile: Dict[str, Any], api_key: Optional[str] = None) -> Dict[str, A
     every visualisation, so an API outage, a missing key or a malformed
     response must degrade the app rather than end the session.
     """
-    key = api_key or os.getenv("GOOGLE_API_KEY")
-
-    if genai is None:
-        logger.info("google-genai not importable; using rule-based routing")
-        return rule_based_route(profile, why=f"SDK unavailable ({SDK_IMPORT_ERROR})")
-    if not key:
-        logger.info("No GOOGLE_API_KEY found; using rule-based routing")
-        return rule_based_route(profile, why="no API key configured")
+    if not llm.available(api_key):
+        # One check where there used to be three. core.llm.status() knows why
+        # -- unimplemented provider, missing client library, absent key -- and
+        # says so in a sentence, which is both what the log wants and what a
+        # user reading "how did NEXUS decide this" wants.
+        reason = llm.status()["reason"]
+        logger.info("No language model available; using rule-based routing: %s", reason)
+        return rule_based_route(profile, why="no AI model is configured here")
 
     try:
-        raw = _call_gemini(json.dumps(compact_profile(profile)), key)
+        raw = _call_model(json.dumps(compact_profile(profile)), api_key)
         candidate = json.loads(strip_code_fences(raw))
         if not isinstance(candidate, dict):
             raise ValueError(f"expected a JSON object, got {type(candidate).__name__}")
 
         validated = _validate(candidate, profile)
         if validated is None:
-            return rule_based_route(profile, why="LLM response failed validation")
+            return rule_based_route(
+                profile, why="the AI named a column this dataset does not have"
+            )
 
         logger.info("Routed by LLM: %s", validated["archetype"])
         return validated
@@ -343,8 +295,9 @@ def route(profile: Dict[str, Any], api_key: Optional[str] = None) -> Dict[str, A
         # The model replied, but not with the JSON contract. AttributeError
         # covers a blocked response whose .text accessor raises.
         logger.warning("Could not parse LLM routing response: %s", exc)
-        return rule_based_route(profile, why=f"unparseable LLM response ({type(exc).__name__})")
-    except API_ERRORS as exc:
-        # Transport, auth, quota, or safety-filter failure.
-        logger.warning("Gemini API call failed (%s): %s", type(exc).__name__, exc)
-        return rule_based_route(profile, why=f"API error: {type(exc).__name__}")
+        return rule_based_route(profile, why="the AI's answer could not be read")
+    except llm.LLMError as exc:
+        # Transport, auth, quota, or a safety filter -- every provider-side
+        # failure arrives as this one type, which is the point of core.llm.
+        logger.warning("Routing model call failed: %s", exc)
+        return rule_based_route(profile, why="the AI service could not be reached")

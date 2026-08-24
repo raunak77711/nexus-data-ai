@@ -24,7 +24,20 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from backend import __version__
-from backend.routers import chat, forecast, health, route, samples, upload, world
+from backend.routers import (
+    assistant,
+    chart,
+    chat,
+    forecast,
+    health,
+    insights,
+    preview,
+    route,
+    samples,
+    simulate,
+    upload,
+    world,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -32,17 +45,25 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Vite's default port, plus the port it falls back to when the first is taken --
+# Vite's default port, plus every port it falls back to when that one is taken --
 # which happens constantly during development and produces a CORS error that
-# looks nothing like "your dev server moved". An explicit list rather than "*"
-# because "*" is incompatible with credentialed requests and normalises a habit
-# that is wrong the moment this is deployed anywhere real.
-ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:5174",
-]
+# looks nothing like "your dev server moved".
+#
+# Enumerating the fallbacks by hand does not work. Vite walks 5173, 5174, 5175,
+# ... for as many stale dev servers as happen to be running, so any fixed list
+# is one stray process away from being wrong. The symptom when it is wrong is
+# this application's own "NEXUS is not responding" banner -- which is a lie: the
+# request reached the server and the server answered, and the browser threw the
+# answer away for want of a header. That is an expensive lie to debug, because
+# every obvious check (is uvicorn up? does /api/health return 200?) passes.
+#
+# So: a regex over loopback on ANY port. Not "*", which is incompatible with
+# credentialed requests and normalises a habit that is wrong the moment this is
+# deployed anywhere real. This widens exactly one dimension -- the port on the
+# developer's own machine -- and still refuses every remote origin. Starlette
+# fullmatches this against the Origin header, so it cannot be prefix-tricked by
+# an origin like http://localhost:5173.evil.com.
+ALLOWED_ORIGIN_REGEX = r"http://(localhost|127\.0\.0\.1):\d+"
 
 API_PREFIX = "/api"
 
@@ -50,23 +71,28 @@ API_PREFIX = "/api"
 def create_app() -> FastAPI:
     """Build the application: routers, CORS, and the shared error handlers."""
     app = FastAPI(
-        title="AI Data Worlds API",
+        title="NEXUS Data AI API",
         version=__version__,
         description=(
-            "Upload a CSV, get a profiled, AI-routed, interactive world back -- "
-            "with the code that produced every figure."
+            "Upload data. Discover intelligence. Profile a CSV, route it to the "
+            "right kind of world, surface what is in it in plain language, ask "
+            "questions that are answered by real calculations -- with the code "
+            "that produced every figure."
         ),
     )
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=ALLOWED_ORIGINS,
+        allow_origin_regex=ALLOWED_ORIGIN_REGEX,
         allow_credentials=True,
         allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["*"],
     )
 
-    for module in (health, upload, samples, route, world, forecast, chat):
+    for module in (
+        health, upload, samples, route, world, forecast, chat, assistant,
+        insights, chart, simulate, preview,
+    ):
         app.include_router(module.router, prefix=API_PREFIX)
 
     @app.exception_handler(StarletteHTTPException)

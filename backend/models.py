@@ -33,10 +33,31 @@ Archetype = Literal["timeseries", "geo", "tabular"]
 
 
 # --------------------------------------------------------------------- health
+class AssistantStatus(BaseModel):
+    """Whether a language model is reachable, and which one.
+
+    On the health response rather than an endpoint of its own because the
+    frontend already polls health to decide whether the server is up, and "is
+    the server up" and "can it answer in its own words" are questions asked at
+    the same moment by the same code. Carries no key material -- only whether
+    one is present.
+    """
+
+    available: bool
+    provider: str = ""
+    model: str = ""
+    reason: str = Field(
+        default="",
+        description="Why the assistant is not available, when it is not. For the "
+        "developer reading /api/health, not for the user.",
+    )
+
+
 class HealthResponse(BaseModel):
     status: Literal["ok"] = "ok"
     version: str
     sessions: int = Field(description="Live sessions held by this process.")
+    assistant: AssistantStatus
 
 
 # --------------------------------------------------------------------- upload
@@ -160,9 +181,227 @@ class ChatResponse(BaseModel):
     )
     available: bool = Field(
         default=True,
-        description="False when the LLM could not be reached, so the UI can say "
-        "chat is unavailable rather than pretending the reply is an answer.",
+        description="False when no answer could be produced at all, so the UI can "
+        "say so rather than pretending the reply is an answer.",
     )
+    answered_by: Literal["computed", "model", "summaries", "unavailable"] = Field(
+        default="summaries",
+        description="Where the reply came from. 'computed' means pandas produced "
+        "the numbers and the wording is templated; 'model' means pandas produced "
+        "the numbers and the model wrote the sentence; 'summaries' means it was "
+        "answered from cached statistics with no fresh calculation. Shown to the "
+        "user, because how an answer was reached is part of the answer.",
+    )
+    tool: Optional[str] = Field(
+        default=None, description="Which calculation ran, if one did."
+    )
+    action: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="A chart spec the client may POST to /chart/{sid} to show the "
+        "answer. Pre-validated against the dataset.",
+    )
+    table: Optional[Dict[str, Any]] = Field(
+        default=None, description="Tabular result rows, when the answer is a list."
+    )
+    data: Optional[Dict[str, Any]] = Field(
+        default=None, description="The raw computed numbers behind the reply."
+    )
+
+
+# ------------------------------------------------------------------ assistant
+class AssistantRequest(BaseModel):
+    """One message from the chat bubble.
+
+    `session_id` is optional and that is the whole point of this endpoint: the
+    bubble is on the home page too, where nothing has been uploaded yet. An
+    unknown or expired id is not an error here either -- it degrades to help
+    about the app, which is what somebody with a timed-out upload needs.
+    """
+
+    message: str = Field(min_length=1, max_length=4000)
+    history: List[ChatMessage] = Field(default_factory=list, max_length=40)
+    session_id: Optional[str] = Field(
+        default=None,
+        description="The open dataset, if there is one. Absent on the home page.",
+    )
+
+
+class AssistantResponse(BaseModel):
+    """One reply, plus enough for the UI to be honest about where it came from."""
+
+    reply: str
+    available: bool = True
+    answered_by: Literal[
+        "computed", "model", "summaries", "unavailable", "guide", "guide_offline"
+    ] = Field(
+        default="guide",
+        description="Where the reply came from. The first four are core.chat's "
+        "and mean a calculation over real rows was involved; 'guide' and "
+        "'guide_offline' are help about the app, the latter from the built-in "
+        "FAQ when no model is reachable.",
+    )
+    about: Literal["data", "app"] = Field(
+        default="app",
+        description="Which assistant answered. The UI uses this to decide "
+        "whether to show the 'worked out from your rows' note.",
+    )
+    action: Optional[Dict[str, Any]] = Field(
+        default=None, description="A chart spec the client may render, if any."
+    )
+    table: Optional[Dict[str, Any]] = Field(
+        default=None, description="Tabular result rows, when the answer is a list."
+    )
+
+
+# ------------------------------------------------------------------- insights
+class Insight(BaseModel):
+    """One finding, written for a reader with no statistics background.
+
+    `evidence` is Dict[str, Any] for the same reason `stats` is: an anomaly's
+    evidence and a trend's evidence share no fields, and modelling their union
+    would mean every field optional and none meaningful. What IS policed is the
+    envelope -- a card without a headline, or with an action the UI cannot
+    execute, must never reach the client.
+    """
+
+    id: str
+    kind: Literal["trend", "relationship", "anomaly", "segment", "quality", "forecast"]
+    tone: Literal["neutral", "positive", "warning"] = "neutral"
+    headline: str
+    detail: str
+    why: str
+    evidence: Dict[str, Any] = Field(default_factory=dict)
+    action: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="A chart spec the client can POST to /chart/{sid} to see "
+        "this finding. Already validated against the dataset, so a rendered "
+        "button is a button that works.",
+    )
+
+
+class InsightCounts(BaseModel):
+    """How many of each kind of finding there are.
+
+    Counts everything found, not everything shown: the card list is truncated
+    for readability and these are not, so the overview stays truthful about the
+    dataset even when the insights screen is showing the best twelve.
+    """
+
+    trends: int = 0
+    relationships: int = 0
+    anomalies: int = 0
+    predictions: int = 0
+    standouts: int = 0
+    data_issues: int = 0
+
+
+class DataShape(BaseModel):
+    """The plain counts the overview screen leads with."""
+
+    n_rows: int
+    n_cols: int
+    n_datetime: int = 0
+    n_numeric: int = 0
+    n_categorical: int = 0
+    n_geo: int = 0
+    n_text: int = 0
+
+
+class InsightsResponse(BaseModel):
+    summary: str
+    counts: InsightCounts
+    shape: DataShape
+    insights: List[Insight]
+
+
+# --------------------------------------------------------------------- chart
+class ChartRequest(BaseModel):
+    """A structured visualisation command.
+
+    Deliberately NOT free-form. Every field is either an enum or a column name
+    that core.charts resolves against the frame, which is what makes this
+    endpoint safe to expose to something an LLM produced -- see core/charts.py.
+    """
+
+    chart: Literal["line", "bar", "scatter", "histogram", "box", "map"]
+    x: Optional[str] = None
+    y: Optional[str] = None
+    lat: Optional[str] = None
+    lon: Optional[str] = None
+    agg: Optional[Literal["sum", "mean", "median", "count", "min", "max"]] = None
+    freq: Optional[Literal["D", "W", "M"]] = None
+    limit: Optional[int] = Field(default=None, ge=1, le=20)
+    ascending: bool = False
+    title: Optional[str] = Field(default=None, max_length=120)
+
+
+class ChartResponse(BaseModel):
+    figure_json: str = Field(
+        description="plotly fig.to_json() output. A string, not an object, so "
+        "the payload is exactly what plotly.js consumes."
+    )
+    code: str = Field(
+        description="The Python that produced this figure -- the same text that "
+        "was executed, not a description of it."
+    )
+    title: str
+    spec: Dict[str, Any]
+    warnings: List[str] = Field(default_factory=list)
+
+
+# ------------------------------------------------------------------ simulate
+class SimulateRequest(BaseModel):
+    pct_change: float = Field(
+        ge=-90, le=200, description="How far to move the driver, in percent."
+    )
+    target: Optional[str] = Field(
+        default=None, description="The measure to project. Defaults to the routed one."
+    )
+    driver: Optional[str] = Field(
+        default=None,
+        description="The measure to move. Defaults to the target itself, which "
+        "makes the projection straight arithmetic rather than an estimate.",
+    )
+
+
+class SimulateOptions(BaseModel):
+    available: bool
+    columns: List[str]
+    default_target: Optional[str] = None
+    suggested_driver: Optional[str] = None
+    min_pct: float
+    max_pct: float
+
+
+class SimulateResponse(BaseModel):
+    status: Literal["ok", "unsupported"]
+    message: str
+    caveats: List[str] = Field(default_factory=list)
+    basis: Optional[Literal["direct", "relationship"]] = None
+    target: Optional[str] = None
+    driver: Optional[str] = None
+    pct_change: Optional[float] = None
+    baseline: Optional[Dict[str, float]] = None
+    projected: Optional[Dict[str, float]] = None
+    delta: Optional[Dict[str, float]] = None
+    rows_used: Optional[int] = None
+    confidence: Optional[Dict[str, Any]] = None
+
+
+# ------------------------------------------------------------------- preview
+class PreviewResponse(BaseModel):
+    """A window onto the actual rows, for the Explore screen.
+
+    Capped server-side rather than trusted to a client-supplied limit, because
+    the whole frame is in memory and serialising a million rows to JSON would
+    take the process down for everyone holding a session.
+    """
+
+    columns: List[str]
+    rows: List[List[Any]]
+    n_rows_total: int
+    n_rows_returned: int
+    truncated: bool
 
 
 # ---------------------------------------------------------------------- error

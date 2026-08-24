@@ -55,7 +55,7 @@ fig = px.histogram(
 # number most people would quote as "the average".
 fig.add_vline(
     x=float(values.mean()),
-    line_dash='dash', line_color='crimson',
+    line_dash='dash', line_color='#71717d',
     annotation_text=f'mean = {values.mean():,.2f}',
     annotation_position='top right',
 )

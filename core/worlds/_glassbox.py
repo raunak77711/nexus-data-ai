@@ -28,6 +28,7 @@ import textwrap
 from string import Template
 from typing import Any, Dict, Optional
 
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -49,7 +50,7 @@ class Raw(str):
 # their own import lines for that reason -- redundant under exec, essential when
 # pasted.
 def _namespace(df: pd.DataFrame) -> Dict[str, Any]:
-    return {"df": df, "pd": pd, "px": px, "go": go}
+    return {"df": df, "pd": pd, "np": np, "px": px, "go": go}
 
 
 def render(template: str, **params: Any) -> str:
