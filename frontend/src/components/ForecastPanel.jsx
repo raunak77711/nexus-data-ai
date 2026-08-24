@@ -35,9 +35,10 @@ export default function ForecastPanel({ forecast, loading, error, onRun, horizon
   return (
     <section className="forecast" aria-labelledby="forecast-heading">
       <div className="section-title">
-        <h2 id="forecast-heading">Forecast</h2>
+        <h2 id="forecast-heading">Predict what is next</h2>
         <span className="section-note">
-          A random forest on lag features, scored against predicting yesterday.
+          NEXUS learns from your history, then checks itself against the simplest
+          possible guess — that tomorrow looks like today.
         </span>
       </div>
 

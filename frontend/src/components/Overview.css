@@ -1,0 +1,189 @@
+/**
+ * The overview screen.
+ *
+ * The counts are the design here. They are set large in the display face with a
+ * small label underneath, in a row, with a hairline between sections — no
+ * cards, no tiles, no boxes. A number that has to sit inside a bordered
+ * rectangle to look important is a number that was not set large enough.
+ */
+
+.overview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* --------------------------------------------------------- screen header --
+ * Shared by every screen in the dashboard, defined once here because Overview
+ * is the first place it appears and duplicating it per screen is how four
+ * headers end up with three different top margins.
+ */
+.screen-head {
+  max-width: var(--measure);
+}
+
+.screen-title {
+  margin-top: var(--space-1);
+  font-size: var(--text-2xl);
+  letter-spacing: var(--tracking-tight);
+  /* The dataset name comes from a filename, so it may be one long token. */
+  overflow-wrap: anywhere;
+}
+
+.screen-head .lead {
+  margin-top: var(--space-2);
+  font-size: var(--text-base);
+}
+
+.section-heading {
+  font-size: var(--text-lg);
+  letter-spacing: var(--tracking-tight);
+}
+
+.overview-section {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+.overview-section > .section-note {
+  display: block;
+  margin-top: var(--space-05);
+}
+
+/* ------------------------------------------------------------- the shape */
+
+.shape-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5) var(--space-6);
+  margin-top: var(--space-3);
+}
+
+.shape-figure {
+  min-width: 5rem;
+}
+
+.shape-value {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  letter-spacing: var(--tracking-tight);
+}
+
+.shape-label {
+  margin: var(--space-05) 0 0;
+  font-size: var(--text-sm);
+  color: var(--fg-subtle);
+}
+
+.shape-skeleton {
+  height: 68px;
+  margin-top: var(--space-3);
+}
+
+/* ------------------------------------------------------------ the findings */
+
+.found-list {
+  margin-top: var(--space-3);
+  list-style: none;
+  border-top: 1px solid var(--border);
+}
+
+.found-item {
+  border-bottom: 1px solid var(--border);
+}
+
+.found-line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-05);
+  text-align: left;
+  font-size: var(--text-base);
+  color: var(--fg);
+}
+
+.found-link {
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    padding-left var(--dur-fast) var(--ease-out);
+  border-radius: var(--radius-sm);
+}
+
+.found-link:hover {
+  background: var(--bg-inset);
+  padding-left: var(--space-1);
+}
+
+.found-count {
+  flex: 0 0 auto;
+  min-width: 3.5ch;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+}
+
+.found-text {
+  color: var(--fg-muted);
+}
+
+.found-go {
+  margin-left: auto;
+  color: var(--fg-faint);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.found-link:hover .found-go {
+  transform: translateX(3px);
+  color: var(--fg);
+}
+
+.found-item[data-empty='yes'] .found-count,
+.found-item[data-empty='yes'] .found-text {
+  color: var(--fg-faint);
+}
+
+.found-none {
+  max-width: var(--measure);
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--fg-subtle);
+}
+
+.found-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-3);
+}
+
+.found-skeleton {
+  height: 220px;
+  margin-top: var(--space-3);
+}
+
+/* ------------------------------------------------------- headline figure */
+
+.overview-figure {
+  margin-top: var(--space-3);
+  padding: var(--space-2);
+  overflow: hidden;
+}
+
+.overview-figure-skeleton {
+  height: 340px;
+}
+
+@media (max-width: 720px) {
+  .shape-grid {
+    gap: var(--space-4);
+  }
+
+  .shape-value {
+    font-size: var(--text-2xl);
+  }
+}

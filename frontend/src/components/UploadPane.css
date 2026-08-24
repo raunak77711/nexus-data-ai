@@ -17,10 +17,10 @@
   display: grid;
   place-items: center;
   gap: var(--space-05);
-  padding: var(--space-5) var(--space-3);
+  padding: var(--space-6) var(--space-3);
   text-align: center;
-  background: var(--bg-elevated);
-  border: 1.5px dashed var(--border-strong);
+  background: var(--bg-sunken);
+  border: 1px dashed var(--border-strong);
   border-radius: var(--radius-lg);
   color: var(--fg-muted);
   overflow: hidden;
@@ -32,8 +32,8 @@
 }
 
 .upload-zone:hover:not([aria-disabled='true']) {
-  border-color: var(--accent-400);
-  background: var(--accent-soft);
+  border-color: var(--fg-faint);
+  background: var(--bg-inset);
 }
 
 /* ------------------------------------------------------- drag: over --
@@ -41,12 +41,11 @@
  * on purpose: a target that grows under the cursor moves its own edges, which
  * makes it harder to drop onto. */
 .upload-zone[data-drag='over'] {
-  border-color: var(--accent);
+  border-color: var(--fg);
   border-style: solid;
-  background: var(--accent-soft);
-  color: var(--accent-700);
+  background: var(--bg-inset);
+  color: var(--fg);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
 }
 
 .upload-zone[data-drag='over'] .upload-icon {
@@ -176,4 +175,25 @@
   color: var(--fg-subtle);
   font-size: var(--text-xs);
   white-space: nowrap;
+}
+
+
+/* ----------------------------------------------------------- the CTA pill --
+ * A visual affordance inside the zone, not a control of its own: the zone is
+ * the button. See the note beside it in UploadPane.jsx.
+ */
+.upload-cta {
+  margin-top: var(--space-2);
+  padding: 0.5rem var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--fg);
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.upload-zone:hover:not([aria-disabled='true']) .upload-cta {
+  border-color: var(--fg-faint);
 }

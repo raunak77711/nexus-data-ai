@@ -2,16 +2,47 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+
+    <!--
+      `global` shim. MUST stay above the module script at the bottom of the
+      body -- module scripts are deferred, so this inline script always runs
+      first, which is the entire reason the fix works here.
+
+      plotly.js reaches `has-hover`, which opens with:
+
+          if (typeof global.matchMedia === 'function') ...
+
+      That tests `typeof global.matchMedia`, not `typeof global`, so it
+      DEREFERENCES `global` -- a Node builtin with no browser equivalent.
+      Webpack and browserify shim it automatically and the package has never
+      had to care; Vite does not, by design.
+
+      The throw lands while the module is still evaluating, i.e. before
+      createRoot().render() ever runs, so the symptom is a fully valid HTML
+      shell, a 200, no failed requests, and nothing rendered. A blank page.
+
+      WHY HERE AND NOT IN vite.config.js: the broken line sits inside a
+      PRE-BUNDLED dependency, so a top-level `define` -- which rewrites source
+      files -- never reaches it. The dependency optimizer needs its own define,
+      and in Vite 8 that surface is unusable: `optimizeDeps.esbuildOptions` is
+      deprecated and silently IGNORED (Rolldown does the optimizing now), while
+      `optimizeDeps.rolldownOptions.define` is rejected outright with
+      "Invalid key: Expected never but received define". This shim sidesteps
+      the optimizer entirely and is stable across Vite versions.
+    -->
+    <script>
+      window.global = window.global || window
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Upload a CSV and get a profiled, AI-routed interactive world back — with the exact Python that produced every chart."
+      content="Upload data. Discover intelligence. NEXUS Data AI turns a raw CSV into an interactive world — what is in it, what is changing, what is unusual, and what comes next."
     />
     <!-- The theme colour follows the OS scheme so the mobile browser chrome
          matches the page rather than framing a dark page in white. -->
-    <meta name="theme-color" content="#f8f7f5" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#121316" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0b0b0d" media="(prefers-color-scheme: dark)" />
 
     <!--
       Fonts. preconnect first because the stylesheet and the font files come
@@ -23,11 +54,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Inter+Tight:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
 
-    <title>AI Data Worlds</title>
+    <title>NEXUS Data AI — Upload data. Discover intelligence.</title>
   </head>
   <body>
     <div id="root"></div>

@@ -181,11 +181,26 @@ export default function UploadPane({ onFile, status, error, filename, fileSize, 
         </span>
 
         <p className="upload-headline">
-          {busy ? 'Reading your file…' : 'Drop a CSV here'}
+          {busy ? 'Opening your file…' : 'Drop your file here'}
         </p>
+        {/* "CSV" is unavoidable — it is the thing they have to go and produce —
+            so it is said with the instruction for producing it attached, rather
+            than as a bare constraint the reader has to go and look up. */}
         <p id={hintId} className="upload-hint">
-          {busy ? 'Profiling columns and choosing a world.' : 'or click to browse — 50MB max'}
+          {busy
+            ? 'This takes a few seconds.'
+            : 'A CSV file — in Excel or Google Sheets, choose Save as CSV'}
         </p>
+
+        {/* A span, not a button. The whole zone is already the control, and a
+            button inside a button is invalid HTML that screen readers announce
+            as two separate things. This looks like the affordance it is part
+            of, and clicking it opens the picker because the zone does. */}
+        {!busy && (
+          <span className="upload-cta" aria-hidden="true">
+            Or choose a file
+          </span>
+        )}
 
         {busy && <span className="upload-bar" aria-hidden="true" />}
       </div>
@@ -211,7 +226,7 @@ export default function UploadPane({ onFile, status, error, filename, fileSize, 
       <div className="upload-status" role="status" aria-live="polite">
         {status === 'error' && error && (
           <p className="status-note" data-tone="error">
-            <strong>Upload failed.</strong> {error}
+            <strong>That did not work.</strong> {error}
           </p>
         )}
         {status === 'loaded' && filename && (

@@ -99,8 +99,8 @@ button {
 }
 
 ::selection {
-  background: var(--accent-200);
-  color: var(--ink-950);
+  background: var(--fg);
+  color: var(--bg);
 }
 
 /* --------------------------------------------------------------- scrollbars */
@@ -143,7 +143,7 @@ button {
   z-index: 100;
   padding: var(--space-1) var(--space-2);
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-fg);
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
@@ -186,7 +186,6 @@ button {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
 }
 
 /* ------------------------------------------------------------------ buttons */
@@ -195,12 +194,14 @@ button {
   align-items: center;
   justify-content: center;
   gap: var(--space-1);
-  padding: var(--space-1) var(--space-2);
+  padding: 0.6rem var(--space-2);
   border-radius: var(--radius-md);
   border: 1px solid transparent;
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-normal);
   line-height: 1.2;
+  white-space: nowrap;
   transition:
     background-color var(--dur-fast) var(--ease-out),
     border-color var(--dur-fast) var(--ease-out),
@@ -221,8 +222,7 @@ button {
 
 .btn-primary {
   background: var(--accent);
-  color: #fff;
-  box-shadow: var(--shadow-sm);
+  color: var(--accent-fg);
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -236,8 +236,8 @@ button {
 }
 
 .btn-secondary:hover:not(:disabled) {
-  border-color: var(--accent);
-  color: var(--accent);
+  background: var(--bg-inset);
+  border-color: var(--fg-faint);
 }
 
 .btn-ghost {
@@ -255,10 +255,11 @@ button {
   display: inline-flex;
   align-items: center;
   gap: var(--space-05);
-  padding: 2px var(--space-1);
-  border-radius: var(--radius-pill);
+  padding: 2px 0.4rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
   font-size: var(--text-2xs);
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-medium);
   letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
   white-space: nowrap;
@@ -291,24 +292,28 @@ button {
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
   line-height: var(--leading-snug);
-  border: 1px solid transparent;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
 }
 
 .status-note[data-tone='error'] {
   background: var(--danger-100);
-  border-color: var(--danger-500);
+  border-color: var(--danger-100);
+  border-left-color: var(--danger-500);
   color: var(--danger-700);
 }
 
 .status-note[data-tone='warning'] {
   background: var(--warning-100);
-  border-color: var(--warning-500);
+  border-color: var(--warning-100);
+  border-left-color: var(--warning-500);
   color: var(--warning-700);
 }
 
 .status-note[data-tone='info'] {
-  background: var(--accent-soft);
-  border-color: var(--accent-200);
+  background: var(--bg-inset);
+  border-color: var(--border);
+  border-left-color: var(--fg-faint);
   color: var(--fg-muted);
 }
 
@@ -348,6 +353,71 @@ button {
   /* The shimmer is the one animation that must actually stop rather than
    * shorten: at 1ms it would strobe. */
   .skeleton::after { display: none; }
+}
+
+/* ------------------------------------------------------------- eyebrows --
+ * The small monospace label that marks a section or a figure.
+ *
+ * WHY the mono face rather than tracked-out Inter: in a page with no colour and
+ * very few rules, the eyebrow is doing most of the structural work, and it has
+ * to be distinguishable from body copy at a glance without being loud. A second
+ * typeface separates it instantly, and this particular second typeface says
+ * "reading off an instrument", which is what the label is doing.
+ *
+ * They are not decoration: an eyebrow always names what is under it.
+ */
+.eyebrow {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+/** A lead paragraph: the one sentence under a screen title. */
+.lead {
+  max-width: var(--measure);
+  font-size: var(--text-lg);
+  line-height: var(--leading-snug);
+  color: var(--fg-muted);
+  letter-spacing: var(--tracking-normal);
+}
+
+/** A hairline rule used to separate screen sections. */
+.rule {
+  height: 1px;
+  border: 0;
+  margin: 0;
+  background: var(--border);
+}
+
+/* ------------------------------------------------------------ the mark --
+ * The NEXUS glyph: four nodes at the corners of a square, joined by the path
+ * bottom-left -> top-left -> bottom-right -> top-right. That polyline IS the
+ * letter N, and with the vertices drawn it is also a four-node graph. One
+ * object, two readings, and it survives being scaled to a favicon.
+ *
+ * The shared styles live here because the mark appears in three places -- the
+ * sidebar, the landing hero, and the upload sequence -- and a logo that differs
+ * slightly between them is a logo nobody trusts.
+ */
+.nexus-mark {
+  display: block;
+  color: currentColor;
+}
+
+.nexus-mark .mark-link {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.nexus-mark .mark-node {
+  fill: currentColor;
+  stroke: none;
 }
 
 /* --------------------------------------------------------------- entrances */

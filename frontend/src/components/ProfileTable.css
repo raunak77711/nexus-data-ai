@@ -124,8 +124,13 @@
   color: var(--fg-subtle);
 }
 
-/* Severity is carried by colour AND by the printed percentage next to it. */
-.null-bar[data-tone='low'] .null-bar-fill { background: var(--success-500); }
+/* Severity is carried by colour AND by the printed percentage next to it.
+ *
+ * The low tone is NEUTRAL, not green: a column with a couple of gaps is the
+ * ordinary case, and painting the ordinary case a colour spends the reader's
+ * attention on the rows that have nothing to say. Colour starts where there is
+ * something to notice. */
+.null-bar[data-tone='low'] .null-bar-fill { background: var(--fg-faint); }
 .null-bar[data-tone='mid'] .null-bar-fill { background: var(--warning-500); }
 .null-bar[data-tone='high'] .null-bar-fill { background: var(--danger-500); }
 .null-bar[data-tone='high'] .null-bar-value { color: var(--danger-700); font-weight: var(--weight-semibold); }

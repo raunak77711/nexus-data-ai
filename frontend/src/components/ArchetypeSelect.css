@@ -89,11 +89,15 @@
 .segmented-routed {
   font-size: 9px;
   line-height: 1;
-  color: var(--warning-500);
+  /* Neutral. The star says "this is the one NEXUS picked", which is a label,
+   * not a status -- and the amber it used to be implied something was wrong
+   * with a perfectly ordinary state. The note below still turns amber when the
+   * user has actually overridden the choice, which IS a status. */
+  color: var(--fg-faint);
 }
 
 .segmented-option[data-selected='yes'] .segmented-routed {
-  color: var(--success-500);
+  color: var(--fg);
 }
 
 /* ------------------------------------------------------------------- note */

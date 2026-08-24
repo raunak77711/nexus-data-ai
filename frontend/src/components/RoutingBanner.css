@@ -24,8 +24,18 @@
   width: 3px;
 }
 
-.routing[data-source='llm']::before { background: var(--success-500); }
-.routing[data-source='fallback']::before { background: var(--warning-500); }
+/* Neutral in both states, deliberately.
+ *
+ * These were green and amber, and amber was making a claim the app cannot
+ * support: routing by the built-in rules is a perfectly good outcome, not a
+ * degraded one, and colouring it as a warning tells the user something went
+ * wrong when nothing did. The banner's own sentence already says which path
+ * decided and why, which is the part that carries information.
+ *
+ * The two states are still distinguishable -- ink versus grey -- so the rule
+ * is doing the same job with less noise. */
+.routing[data-source='llm']::before { background: var(--fg); }
+.routing[data-source='fallback']::before { background: var(--fg-faint); }
 
 .routing-head {
   display: flex;
@@ -54,15 +64,15 @@
 }
 
 .routing-badge[data-source='llm'] {
-  background: var(--success-100);
-  color: var(--success-700);
-  border-color: color-mix(in srgb, var(--success-500) 40%, transparent);
+  background: var(--bg-inset);
+  color: var(--fg);
+  border-color: var(--border-strong);
 }
 
 .routing-badge[data-source='fallback'] {
-  background: var(--warning-100);
-  color: var(--warning-700);
-  border-color: color-mix(in srgb, var(--warning-500) 45%, transparent);
+  background: transparent;
+  color: var(--fg-subtle);
+  border-color: var(--border);
 }
 
 .routing-dot {
@@ -80,7 +90,7 @@
 }
 
 @keyframes routing-pulse {
-  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 color-mix(in srgb, var(--success-500) 55%, transparent); }
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 color-mix(in srgb, var(--fg) 40%, transparent); }
   60% { opacity: 0.85; box-shadow: 0 0 0 5px transparent; }
 }
 

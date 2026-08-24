@@ -295,4 +295,11 @@
   .world-figures > .world-figure:only-child {
     grid-column: 1 / -1;
   }
+  /* A figure left alone on the last row spans it rather than sitting in the
+   * left-hand column with a hole beside it. With the first figure always full
+   * width, the remainder is odd exactly when the total is even -- which is what
+   * :last-child:nth-child(even) tests. */
+  .world-figures > .world-figure:last-child:nth-child(even) {
+    grid-column: 1 / -1;
+  }
 }

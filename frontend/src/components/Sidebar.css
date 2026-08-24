@@ -1,0 +1,235 @@
+/**
+ * The sidebar.
+ *
+ * A single hairline separates it from the content, and the active item is
+ * marked by a filled surface rather than by a coloured bar — in a monochrome
+ * system, a change of surface is the strongest available signal that does not
+ * introduce a hue.
+ */
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: var(--sidebar-width);
+  height: 100dvh;
+  position: sticky;
+  top: 0;
+  flex: 0 0 auto;
+  padding: var(--space-3);
+  background: var(--bg-sunken);
+  border-right: 1px solid var(--border);
+}
+
+/* ------------------------------------------------------------------ brand */
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-1) 0;
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.sidebar-wordmark {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  /* The wordmark is the one place wide tracking is used on a sans face: at this
+   * size, spaced capitals read as a mark rather than as a word in a sentence. */
+  letter-spacing: 0.14em;
+}
+
+/* -------------------------------------------------------------------- nav */
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  list-style: none;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: 100%;
+  padding: 0.5rem var(--space-1);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--fg-muted);
+  text-align: left;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.sidebar-link:hover {
+  background: var(--bg-inset);
+  color: var(--fg);
+}
+
+.sidebar-link[aria-current='page'] {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  /* The border adds a pixel on each side; the padding compensates so the row
+   * does not shift by 1px as it becomes active. */
+  padding: calc(0.5rem - 1px) calc(var(--space-1) - 1px);
+  color: var(--fg);
+}
+
+.sidebar-icon {
+  flex: 0 0 auto;
+  opacity: 0.85;
+}
+
+.sidebar-spark {
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.sidebar-ask {
+  margin-top: var(--space-2);
+}
+
+/* ------------------------------------------------------------------- foot */
+
+.sidebar-foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sidebar-dataset {
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border);
+}
+
+.sidebar-filename {
+  margin-top: var(--space-05);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-shape {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+
+.sidebar-new {
+  width: 100%;
+}
+
+.sidebar-health {
+  display: flex;
+  align-items: center;
+  gap: var(--space-05);
+  font-size: var(--text-2xs);
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  color: var(--fg-faint);
+}
+
+.sidebar-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: var(--radius-pill);
+  background: var(--fg-faint);
+}
+
+/* Colour appears here because it is carrying a fact: whether the server is
+ * answering. Two states, two colours, and neither is decorative. */
+.sidebar-health[data-state='up'] .sidebar-dot { background: var(--success-500); }
+.sidebar-health[data-state='down'] .sidebar-dot { background: var(--danger-500); }
+
+/* ------------------------------------------------------------- responsive --
+ * Below the breakpoint the sidebar becomes a horizontal bar under the header.
+ * The DOM does not change -- it is the same nav, the same list, in the same
+ * order -- so nothing about keyboard or screen-reader behaviour depends on the
+ * viewport width.
+ */
+@media (max-width: 900px) {
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    height: auto;
+    padding: var(--space-1) var(--space-2);
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .sidebar-brand {
+    padding: 0;
+  }
+
+  .sidebar-wordmark {
+    /* The mark alone carries the brand once space is tight; the word is the
+     * first thing that can go. */
+    display: none;
+  }
+
+  .sidebar-nav {
+    flex-direction: row;
+    gap: var(--space-05);
+  }
+
+  .sidebar-ask {
+    margin-top: 0;
+  }
+
+  .sidebar-foot {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-1);
+    margin-left: auto;
+  }
+
+  .sidebar-dataset,
+  .sidebar-health {
+    display: none;
+  }
+
+  .sidebar-new {
+    width: auto;
+  }
+}
+
+@media (max-width: 560px) {
+  .sidebar-label {
+    /* Below this width the five labels cannot all fit, and a horizontally
+     * scrolling nav where the first item is cut off reads as broken. Icons
+     * only, with the accessible name still on the button. */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .sidebar-link {
+    padding: 0.5rem 0.6rem;
+  }
+
+  .sidebar-link[aria-current='page'] {
+    padding: calc(0.5rem - 1px) calc(0.6rem - 1px);
+  }
+}

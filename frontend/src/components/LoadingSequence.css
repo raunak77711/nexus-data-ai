@@ -1,0 +1,116 @@
+/**
+ * The upload sequence.
+ *
+ * Quiet on purpose. The only thing moving is the mark assembling and the tick
+ * on the active step; everything else holds still, because a screen that is
+ * busy while you wait makes the wait feel longer, not shorter.
+ */
+
+.sequence {
+  display: grid;
+  place-items: center;
+  min-height: 70vh;
+  padding: var(--space-6) var(--space-4);
+}
+
+.sequence-inner {
+  width: 100%;
+  max-width: 30rem;
+  text-align: center;
+  animation: fade-in var(--dur-slow) var(--ease-out) both;
+}
+
+.sequence-mark {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-4);
+  color: var(--fg);
+}
+
+.sequence-current {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+}
+
+.sequence-detail {
+  margin-top: var(--space-05);
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+
+.sequence-file {
+  margin-top: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+
+.sequence-steps {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-5);
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.sequence-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--fg-faint);
+  transition: color var(--dur-normal) var(--ease-out);
+}
+
+.sequence-step[data-state='active'] { color: var(--fg); }
+.sequence-step[data-state='done'] { color: var(--fg-muted); }
+
+.sequence-tick {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-pill);
+  border: 1px solid currentColor;
+  background: transparent;
+  transition:
+    background-color var(--dur-normal) var(--ease-out),
+    transform var(--dur-normal) var(--ease-out);
+}
+
+.sequence-step[data-state='done'] .sequence-tick {
+  background: currentColor;
+}
+
+.sequence-step[data-state='active'] .sequence-tick {
+  background: currentColor;
+  /* The one pulse in the sequence, on the one step that is actually running. */
+  animation: sequence-pulse 1.6s var(--ease-in-out) infinite;
+}
+
+@keyframes sequence-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.45); opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The global override collapses durations, which for an infinite animation
+   * would strobe rather than stop. This one has to be switched off outright. */
+  .sequence-step[data-state='active'] .sequence-tick {
+    animation: none;
+  }
+}
+
+/* The "nothing for you to do" line. Quiet and small: it is reassurance for
+ * whoever is watching the screen wondering whether they missed a step, not
+ * another instruction to read. */
+.sequence-reassure {
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}

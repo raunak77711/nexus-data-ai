@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Plotly from 'plotly.js/lib/core'
 import bar from 'plotly.js/lib/bar'
+import box from 'plotly.js/lib/box'
 import heatmap from 'plotly.js/lib/heatmap'
 import histogram from 'plotly.js/lib/histogram'
 import scatter from 'plotly.js/lib/scatter'
@@ -19,7 +20,8 @@ import './PlotFigure.css'
  *
  * The list is not arbitrary; it is exactly what core/ can emit:
  *   scatter    -- the timeseries line and its rolling overlay, and the forecast
- *   bar        -- the tabular world's mean-by-category chart
+ *   bar        -- the tabular world's mean-by-category chart, and rankings
+ *   box        -- a spec chart comparing a measure across categories
  *   histogram  -- the tabular world's distribution
  *   heatmap    -- the correlation matrix
  *   scattermap -- the geo world (MapLibre; core/ deliberately avoids the
@@ -29,7 +31,7 @@ import './PlotFigure.css'
  * found" rather than failing silently -- which is the right failure, and the
  * fix is one line here.
  */
-Plotly.register([scatter, bar, histogram, heatmap, scattermap])
+Plotly.register([scatter, bar, box, histogram, heatmap, scattermap])
 const Plot = createPlotlyComponent(Plotly)
 
 /**
@@ -44,8 +46,23 @@ const Plot = createPlotlyComponent(Plotly)
  * Arial. Dropped into this page it would look like a screenshot of a different
  * application. The overrides below make the chart transparent to the page's own
  * surface and switch it to the app's typeface -- but they touch presentation
- * only. No override changes an axis range, a trace, a colour SCALE or anything
- * else that could alter what the chart says.
+ * only. No override changes an axis range, a trace's data, a colour SCALE, or
+ * anything else that could alter what the chart says.
+ *
+ * SERIES COLOUR is the one addition to that list, and it is worth being precise
+ * about. plotly express assigns each category in a split chart a colour from its
+ * own rainbow sequence, which is baked into the figure by the server. The server
+ * cannot know whether the person looking at it has a light or a dark page, and a
+ * fixed sequence that is legible on both would have to live in the middle of the
+ * range, where the steps are too close together to tell apart.
+ *
+ * So recolourSeries() below reassigns those colours from the page's own ramp, in
+ * trace order. What it does NOT touch: any trace whose colour is an ARRAY or a
+ * colour scale, because there the colour is the data -- the correlation heatmap
+ * and the map both encode a value in their colour, and repainting either would
+ * be changing what the chart says rather than how it looks. The legend still
+ * maps each name to the colour drawn for it, so nothing about reading the chart
+ * changes; only the palette does.
  */
 
 /** Plotly's toolbar, trimmed to what is actually useful for these charts. */
@@ -73,13 +90,23 @@ function readTheme() {
   const styles = getComputedStyle(document.documentElement)
   const value = (name, fallback) => styles.getPropertyValue(name).trim() || fallback
   return {
-    fg: value('--fg', '#14151a'),
-    muted: value('--fg-muted', '#5c6172'),
-    grid: value('--border', '#e4e3e0'),
+    fg: value('--fg', '#0b0b0d'),
+    muted: value('--fg-muted', '#55555f'),
+    grid: value('--border', '#ebebee'),
+    surface: value('--bg-elevated', '#ffffff'),
     font: value('--font-body', 'Inter, sans-serif'),
-    // A qualitative sequence for multi-series charts: the accent first, then
-    // hues spaced far enough apart to stay separable at 1.5px line width.
-    colorway: ['#6350f5', '#0f9b8e', '#ff6b3d', '#c47b0a', '#2f6fd0', '#b4459f'],
+    // The series ramp, read from the cascade rather than duplicated here so a
+    // repalette is a change to tokens.css alone. Achromatic and separated by
+    // lightness -- see the note beside --chart-1 for why that is the more
+    // legible choice here, not merely the more on-brand one.
+    colorway: [
+      value('--chart-1', '#0b0b0d'),
+      value('--chart-2', '#9a9aa4'),
+      value('--chart-3', '#4a4a53'),
+      value('--chart-4', '#c8c8d0'),
+      value('--chart-5', '#6e6e79'),
+      value('--chart-6', '#dededf'),
+    ],
   }
 }
 
@@ -92,7 +119,7 @@ function readTheme() {
  *   in the same theming and config code below, so the two kinds of chart cannot
  *   drift apart visually.
  */
-export default function PlotFigure({ figureJson, figure: figureProp, title }) {
+export default function PlotFigure({ figureJson, figure: figureProp, title, height }) {
   const [theme, setTheme] = useState(readTheme)
 
   // Re-read the tokens when the OS theme flips, so an open chart recolours with
@@ -125,7 +152,8 @@ export default function PlotFigure({ figureJson, figure: figureProp, title }) {
     )
   }
 
-  const { data, layout } = parsed.figure
+  const { layout } = parsed.figure
+  const data = recolourSeries(parsed.figure.data, theme.colorway)
 
   const merged = {
     ...layout,
@@ -140,7 +168,7 @@ export default function PlotFigure({ figureJson, figure: figureProp, title }) {
     title: undefined,
     margin: { l: 56, r: 20, t: 12, b: 44, ...(layout?.margin ?? {}) },
     hoverlabel: {
-      bgcolor: 'var(--bg-elevated)',
+      bgcolor: theme.surface,
       bordercolor: theme.grid,
       font: { family: theme.font, size: 12, color: theme.fg },
       ...(layout?.hoverlabel ?? {}),
@@ -163,7 +191,7 @@ export default function PlotFigure({ figureJson, figure: figureProp, title }) {
   }
 
   return (
-    <div className="plot-figure">
+    <div className="plot-figure" style={height ? { height } : undefined}>
       <Plot
         data={data}
         layout={merged}
@@ -174,4 +202,46 @@ export default function PlotFigure({ figureJson, figure: figureProp, title }) {
       />
     </div>
   )
+}
+
+
+/**
+ * Repaint categorical series from the page's ramp, leaving data colours alone.
+ *
+ * A trace is a "series" when its colour is one flat colour standing for its
+ * name. A trace whose colour is an array, or which carries a colour scale, is
+ * encoding a value per point -- that is data, and it is returned untouched.
+ */
+function recolourSeries(traces, colorway) {
+  if (!Array.isArray(traces) || !colorway?.length) return traces
+
+  let seriesIndex = 0
+  return traces.map((trace) => {
+    const marker = trace.marker ?? {}
+    const encodesValue =
+      Array.isArray(marker.color) ||
+      marker.colorscale !== undefined ||
+      marker.colorbar !== undefined ||
+      trace.colorscale !== undefined ||
+      ['heatmap', 'histogram2d', 'choropleth', 'contour'].includes(trace.type)
+
+    if (encodesValue) return trace
+
+    const colour = colorway[seriesIndex % colorway.length]
+    seriesIndex += 1
+
+    const next = { ...trace }
+    if (trace.line && typeof trace.line === 'object') {
+      next.line = { ...trace.line, color: colour }
+    }
+    if (trace.marker && typeof trace.marker === 'object') {
+      next.marker = { ...trace.marker, color: colour }
+    }
+    // A bar or histogram with no explicit marker still needs one to be told
+    // what colour to be; without this it falls back to plotly's default blue.
+    if (!next.marker && ['bar', 'histogram', 'box'].includes(trace.type)) {
+      next.marker = { color: colour }
+    }
+    return next
+  })
 }

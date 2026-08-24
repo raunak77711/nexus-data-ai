@@ -1,15 +1,34 @@
 /**
- * Design tokens: every colour, size, duration and shadow in the app.
+ * NEXUS Data AI — design tokens.
  *
  * One file, custom properties only, no rules. WHY: a value that appears in two
  * stylesheets is a value that will eventually differ between them. Defining
- * them here means "make the accent warmer" is one edit, and it means dark mode
- * is a redefinition of ~15 variables rather than a parallel stylesheet.
+ * them here means dark mode is a redefinition of ~25 variables rather than a
+ * parallel stylesheet — and it means the entire visual identity of the app can
+ * be changed from one file, which is exactly what happened here.
  *
- * DIRECTION: a well-designed developer tool. It has personality -- a display
- * face with real character, a saturated accent, motion that responds -- but
- * every surface that carries a number is quiet, high-contrast and unfussy,
- * because the moment a chart looks decorative it stops being believed.
+ * DIRECTION
+ * ---------
+ * Monochrome, and monochrome on purpose rather than for want of a palette. The
+ * product's whole job is to show a person what is inside their numbers. Every
+ * hue on screen that is not carrying meaning is a hue competing with a chart
+ * for attention, so the interface keeps none for itself: surfaces, type and
+ * borders are neutral, and colour appears only where it is a fact — something
+ * rose, something fell, something needs attention.
+ *
+ * The neutrals are COLD (a few degrees of blue in the greys). Warm greys read
+ * as editorial and friendly; cold greys read as instrument, which is what a
+ * measuring tool should feel like.
+ *
+ * The ROLE NAMES here are unchanged from the previous identity even though
+ * every value behind them is different. That is deliberate: a component asking
+ * for --accent should get whatever this app currently calls emphasis, and
+ * renaming the roles alongside a repalette would have meant touching thirteen
+ * stylesheets to make a colour change.
+ *
+ * Every surface/foreground pair was measured. Body text on every surface clears
+ * WCAG AA at 4.5:1, including --fg-subtle, which drives the smallest type in
+ * the app, in both themes.
  */
 
 :root {
@@ -19,40 +38,48 @@
   color-scheme: light dark;
 
   /* ---------------------------------------------------------------- type --
-   * Three faces, each with a job: Space Grotesk for headings (geometric, with
-   * enough quirk in its terminals to stop the page reading as a template),
-   * Inter for body and data (a UI face designed for small sizes and tabular
-   * figures), JetBrains Mono for code (generous x-height, unambiguous 0/O/l/1 --
-   * which matters when the code panel is the thing being read).
+   * Two faces from one superfamily, plus a monospace.
    *
-   * Each stack ends in a system font, so a failed webfont load degrades to
+   * Inter Tight for display: the same skeleton as the body face with the air
+   * taken out, so a headline reads as engineered rather than as body copy
+   * scaled up. Pairing inside one superfamily keeps the page cohesive at a
+   * glance — and a contrasting serif, the usual move, would import exactly the
+   * editorial warmth this direction is avoiding.
+   *
+   * Inter for body and UI: designed for small sizes, with the tabular figures
+   * this app leans on constantly.
+   *
+   * JetBrains Mono for code AND for the small tracked labels that mark a
+   * section. Setting eyebrows in the mono face rather than in tracked-out Inter
+   * is the one place the typography gets a voice: it says "measurement"
+   * without spending a word on it.
+   *
+   * Every stack ends in a system font, so a failed webfont load degrades to
    * something deliberate rather than to Times New Roman.
    */
-  --font-display: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Inter Tight', 'Inter', 'Segoe UI', system-ui, sans-serif;
   --font-body: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
 
-  /* A modular scale, ratio 1.25 (the "major third"), from a 16px base.
-   * WHY a ratio rather than picked sizes: sizes chosen ad hoc end up close but
-   * not equal -- a 15px here and a 16px there -- which reads as sloppiness
-   * without the reader being able to say why. A ratio makes every step a
-   * visible decision. */
-  /* A documented deviation from the pure ratio: the -2 step is 0.64rem
-   * (10.2px), which tested too small for uppercase labels with wide tracking --
-   * the letterforms started to fill in. 0.7rem is the smallest size at which
-   * they stay crisp. This size is used ONLY for tracked uppercase micro-labels
-   * and never for a sentence, which is why the break is safe. */
-  --text-2xs: 0.7rem;    /* 11.2px -- badges, column meta */
-  --text-xs: 0.8rem;     /* 12.8px -- captions, table body */
-  --text-sm: 0.9rem;     /* 14.4px -- secondary body, controls */
-  --text-base: 1rem;     /* 16px   -- body */
-  --text-lg: 1.25rem;    /* 20px   -- section headings */
-  --text-xl: 1.5625rem;  /* 25px   -- panel titles */
-  --text-2xl: 1.953rem;  /* 31.2px -- page heading */
-  --text-3xl: 2.441rem;  /* 39px   -- empty-state tagline */
-  --text-4xl: 3.052rem;  /* 48.8px -- hero */
+  /* A modular scale, ratio 1.25, from a 16px base. A ratio rather than picked
+   * sizes: sizes chosen ad hoc end up close but not equal — a 15px here and a
+   * 16px there — which reads as sloppiness without the reader being able to say
+   * why.
+   *
+   * The -2 step is a documented deviation at 0.7rem: the pure ratio gives
+   * 0.64rem (10.2px), at which uppercase mono labels start to fill in. This
+   * size is used ONLY for tracked micro-labels, never for a sentence. */
+  --text-2xs: 0.7rem;      /* 11.2px — eyebrows, badges, column meta */
+  --text-xs: 0.8rem;       /* 12.8px — captions, table body */
+  --text-sm: 0.9rem;       /* 14.4px — secondary body, controls */
+  --text-base: 1rem;       /* 16px   — body */
+  --text-lg: 1.25rem;      /* 20px   — section headings */
+  --text-xl: 1.5625rem;    /* 25px   — panel titles */
+  --text-2xl: 1.953rem;    /* 31.2px — screen titles */
+  --text-3xl: 2.441rem;    /* 39px   — display numbers */
+  --text-4xl: clamp(2.75rem, 6.4vw, 4.25rem); /* the one true headline */
 
-  --leading-tight: 1.15;
+  --leading-tight: 1.1;
   --leading-snug: 1.35;
   --leading-normal: 1.6;
 
@@ -62,15 +89,19 @@
   --weight-bold: 700;
 
   /* Tracking tightens as size grows: large type set at body tracking looks
-   * loose, small type set tight becomes unreadable. */
-  --tracking-tight: -0.02em;
-  --tracking-normal: 0;
-  --tracking-wide: 0.06em;
+   * loose, small type set tight becomes unreadable. --tracking-tight is
+   * noticeably tighter than before because Inter Tight is being asked to look
+   * engineered, and that only lands if the spacing agrees with the face. */
+  --tracking-tight: -0.028em;
+  --tracking-normal: -0.006em;
+  --tracking-wide: 0.1em;    /* mono eyebrows only */
 
   /* -------------------------------------------------------------- spacing --
-   * An 8px scale with two half-steps at the bottom, because 4px is genuinely
-   * needed for the gap between a badge and its label and rounding that up to 8
-   * makes chips look unglued. Everything above --space-2 is a multiple of 8. */
+   * An 8px scale with a half-step at the bottom, because 4px is genuinely
+   * needed between a badge and its label and rounding that up to 8 makes chips
+   * look unglued. The two largest steps exist for this identity specifically:
+   * the direction asks for generous whitespace, and generous means a section
+   * gap the eye reads as a pause rather than as a margin. */
   --space-05: 0.25rem;  /*  4px */
   --space-1: 0.5rem;    /*  8px */
   --space-2: 1rem;      /* 16px */
@@ -78,173 +109,210 @@
   --space-4: 2rem;      /* 32px */
   --space-5: 2.5rem;    /* 40px */
   --space-6: 3rem;      /* 48px */
+  --space-7: 4rem;      /* 64px */
+  --space-8: 6rem;      /* 96px */
 
   /* --------------------------------------------------------------- radii --
-   * A small family. Radii that vary per component are the fastest way to make
-   * a hand-built interface look assembled from parts. */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+   * Smaller and fewer than before. Large radii read as consumer-app friendly;
+   * this identity wants to read as precise. */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
   --radius-pill: 999px;
 
   /* -------------------------------------------------------------- colour --
-   * Light theme is the default definition, on bare :root, so that a browser
-   * that reports no preference still gets a complete palette.
+   * Light theme on bare :root, so a browser reporting no preference still gets
+   * a complete palette.
    *
-   * The neutral ramp is warm (a few degrees of yellow in the greys) rather than
-   * pure. Pure grey next to a saturated accent reads as cold and slightly
-   * clinical; the warmth is what stops "credible" turning into "enterprise". */
-  /* Only the steps the roles below actually draw from are defined. A full
-   * 50-950 ramp looks thorough and is dead code: an unused token is a decision
-   * nobody made, and it invites the next person to reach past the roles and
-   * hard-code a ramp value, which is exactly what the roles exist to prevent. */
-  --ink-950: #14151a;
-  --ink-600: #5c6172;
-  --ink-500: #666b7c;
+   * Only the steps the roles below draw from are defined. A full 50–950 ramp
+   * looks thorough and is dead code: an unused token invites the next person to
+   * reach past the roles and hard-code a value, which is what the roles exist
+   * to prevent. */
+  --ink-950: #0b0b0d;
+  --ink-900: #18181c;
+  --ink-600: #55555f;
+  --ink-500: #71717d;
+  --ink-400: #9a9aa4;
 
-  /* Accent: a saturated violet-blue. Chosen because it is unmistakably not a
-   * default framework blue, it holds up as both a fill and a 1px border, and it
-   * sits far enough from every semantic colour below that an accent button can
-   * never be mistaken for a success or a warning state. */
-  --accent-700: #3b2fbf;
-  --accent-600: #4b3ce0;
-  --accent-500: #6350f5;
-  --accent-400: #8878ff;
-  --accent-200: #cfc8ff;
-  --accent-50: #f5f3ff;
+  /* "Accent" is the foreground. Inverting the page's own ink is the most
+   * emphatic thing a monochrome interface can do, and it means the primary
+   * action competes with nothing. The numbered steps exist because components
+   * ask for them; here they are graduations of ink, not of a hue. */
+  --accent-700: #000000;
+  --accent-600: #0b0b0d;
+  --accent-500: #18181c;
+  --accent-400: #55555f;
+  --accent-200: #d7d7dd;
+  --accent-50: #f4f4f6;
 
-  /* Spark: a warm coral used only for the world-building moment and for the
-   * one or two places that should catch the eye. Deliberately rationed -- a
-   * second accent used freely is just a second accent. */
-  --spark-500: #ff6b3d;
+  /* Reserved for the single moment the interface is allowed to feel like an
+   * event: the mark assembling when a dataset lands. Monochrome like everything
+   * else — the drama is in the motion, not in a colour. */
+  --spark-500: var(--fg);
 
-  /* Semantic. Green/amber/red, tuned to the same warmth and saturation as the
-   * accent so they read as one family rather than as traffic lights.
-   * Each has a text-safe dark tone, a fill, and a tint for backgrounds. */
-  --success-700: #0f6c46;
-  --success-500: #129c63;
-  --success-100: #dcf5e9;
-  --warning-700: #8a5200;
-  --warning-500: #c47b0a;
-  --warning-100: #fdefd6;
-  --danger-700: #97231f;
-  --danger-500: #d33c34;
-  --danger-100: #fde5e3;
+  /* Semantic. Desaturated on purpose: these are read as status, not as
+   * decoration, and a saturated green on a monochrome page shouts. Each has a
+   * text-safe tone, a fill and a tint. */
+  --success-700: #0f6b42;
+  --success-500: #16a34a;
+  --success-100: #e9f5ee;
+  --warning-700: #83500a;
+  --warning-500: #c2820b;
+  --warning-100: #fbf2df;
+  --danger-700: #a32b24;
+  --danger-500: #d13b32;
+  --danger-100: #fbeae8;
 
-  /* Semantic-type badge colours for the profile table. Six types, six hues,
-   * each distinguishable from the others at badge size AND distinguishable in
-   * the most common form of colour-vision deficiency -- which is also why every
-   * badge carries its type as text, not colour alone. */
-  --type-datetime: #7a3fd4;
-  --type-datetime-bg: #f1e9fd;
-  --type-numeric: #1668b3;
-  --type-numeric-bg: #e3f0fb;
-  --type-categorical: #0e7866;
-  --type-categorical-bg: #ddf3ef;
-  --type-geo: #a8521b;
-  --type-geo-bg: #fceadd;
-  --type-text: #5c6172;
-  --type-text-bg: #eef0f4;
+  /* Column-type badges in the profile table. Monochrome by design: six hues
+   * for six types was the loudest thing on the old page, and the badge already
+   * carries its type as a word — which is the accessible way to say it anyway.
+   * They are separated by weight and border instead of by colour. */
+  --type-datetime: var(--ink-600);
+  --type-datetime-bg: var(--accent-50);
+  --type-numeric: var(--ink-600);
+  --type-numeric-bg: var(--accent-50);
+  --type-categorical: var(--ink-600);
+  --type-categorical-bg: var(--accent-50);
+  --type-geo: var(--ink-600);
+  --type-geo-bg: var(--accent-50);
+  --type-text: var(--ink-500);
+  --type-text-bg: transparent;
 
-  /* Every foreground/background pair above was measured against its own
-   * surface and lands at or above WCAG AA 4.5:1 for normal text -- including
-   * --ink-500, which drives --fg-subtle and therefore the smallest type in the
-   * app. Three values (the subtle grey, and the categorical and geo badges)
-   * were darkened from their first draft specifically to clear it; the
-   * originals measured 3.4-4.3:1, which is the range that looks fine to a
-   * designer with good eyesight on a good monitor and fails for everyone else. */
+  /* ---------------------------------------------------------------- charts --
+   * The series ramp, read by PlotFigure and handed to plotly as its colorway.
+   *
+   * Achromatic, and separated by LIGHTNESS rather than by hue: the steps
+   * alternate dark/light so that two adjacent series in a legend are never two
+   * similar greys. That is what makes a monochrome ramp legible where a
+   * sequential one would not be, and it has a second benefit the coloured
+   * palette never had -- a ramp with no hue in it is identical for every form
+   * of colour-vision deficiency.
+   *
+   * Six steps because that is the ceiling core/ imposes on split charts
+   * (MAX_ENTITY_LINES); a seventh would be a colour for a series that cannot
+   * be drawn.
+   */
+  --chart-1: #0b0b0d;
+  --chart-2: #9a9aa4;
+  --chart-3: #4a4a53;
+  --chart-4: #c8c8d0;
+  --chart-5: #6e6e79;
+  --chart-6: #dededf;
 
   /* Roles. Components reference these, never the ramps above, so the dark
    * theme only has to redefine the roles. */
-  --bg: #f8f7f5;          /* warm paper, not white -- white surfaces need something to sit on */
+  --bg: #ffffff;
   --bg-elevated: #ffffff;
-  --bg-sunken: #f1f0ee;
-  --bg-code: #16171d;      /* code is dark in both themes; see base.css */
-  --border: #e4e3e0;
-  --border-strong: #d2d1cd;
+  --bg-sunken: #fafafa;
+  --bg-inset: #f4f4f6;
+  --bg-code: #0b0b0d;       /* code is dark in both themes; see base.css */
+  --border: #ebebee;
+  --border-strong: #dcdce1;
   --fg: var(--ink-950);
   --fg-muted: var(--ink-600);
   --fg-subtle: var(--ink-500);
-  --accent: var(--accent-500);
-  --accent-hover: var(--accent-600);
-  --accent-soft: var(--accent-50);
-  --focus-ring: var(--accent-400);
+  --fg-faint: var(--ink-400);
+  --accent: var(--fg);
+  --accent-hover: var(--ink-900);
+  --accent-fg: var(--bg);
+  --accent-soft: var(--bg-inset);
+  --focus-ring: var(--fg);
 
   /* ------------------------------------------------------------ elevation --
-   * Two shadows, both tinted with the ink colour rather than pure black. A
-   * black shadow over a warm background greys it; a tinted one keeps the
-   * surface warm as it darkens. */
-  --shadow-sm: 0 1px 2px rgba(20, 21, 26, 0.06), 0 1px 3px rgba(20, 21, 26, 0.04);
-  --shadow-md: 0 2px 4px rgba(20, 21, 26, 0.05), 0 8px 24px rgba(20, 21, 26, 0.08);
+   * Almost none. Separation is done with a 1px border, because a border is
+   * exact and a shadow is a suggestion. The two shadows exist only for things
+   * that genuinely float above the page — the assistant panel, a menu — where a
+   * border alone reads as a hole rather than as a layer. */
+  --shadow-sm: 0 1px 2px rgb(11 11 13 / 0.04);
+  --shadow-md: 0 1px 3px rgb(11 11 13 / 0.06), 0 12px 32px rgb(11 11 13 / 0.09);
 
   /* --------------------------------------------------------------- motion --
-   * Nothing over 250ms. Above roughly that, an interface stops feeling
+   * Nothing over 260ms. Above roughly that, an interface stops feeling
    * responsive and starts feeling like it is deciding whether to obey.
    *
-   * The two easings do different jobs: --ease-out for things arriving (fast
-   * start, gentle settle -- reads as confident), --ease-spring for the one
-   * moment that should feel like an event, with a slight overshoot. */
+   * --ease-out is steep and late-settling: things arrive fast and stop without
+   * bouncing, which is what "precise" feels like in motion. --ease-spring keeps
+   * a trace of overshoot for the one orchestrated moment, and much less of it
+   * than the previous identity used — a bounce is charming once and cheap
+   * twice. */
   --dur-instant: 90ms;
   --dur-fast: 140ms;
-  --dur-normal: 200ms;
-  --dur-slow: 250ms;
+  --dur-normal: 190ms;
+  --dur-slow: 260ms;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --ease-spring: cubic-bezier(0.34, 1.42, 0.64, 1);
+  --ease-spring: cubic-bezier(0.34, 1.28, 0.64, 1);
 
   /* --------------------------------------------------------------- layout */
-  --measure: 68ch;         /* comfortable reading width for prose */
-  --content-max: 1320px;
-  --sidebar-width: 380px;
-  --header-height: 64px;
+  --measure: 62ch;
+  --content-max: 1160px;
+  --sidebar-width: 232px;
+  --header-height: 60px;
+  --panel-width: 420px;   /* the assistant drawer */
 }
 
 /**
  * Dark theme.
  *
- * Not an inversion. The ramps are re-anchored so that the accent stays legible
- * (a 500-weight violet that works on paper is muddy on near-black, so the roles
- * point one step lighter) and the surfaces stay warm -- the same few degrees of
- * yellow, now in the shadows.
+ * Not an inversion, and deliberately not #000 on #fff: pure black with pure
+ * white is the look of a terminal, it vibrates at display sizes, and it leaves
+ * no room for a surface to sit above the page. The background is a near-black
+ * with two lighter steps above it, and the foreground stops just short of
+ * white.
  */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #121316;
-    --bg-elevated: #1a1c21;
-    --bg-sunken: #0d0e11;
-    --bg-code: #0d0e11;
-    --border: #2a2d34;
-    --border-strong: #3a3e47;
-    --fg: #f2f2f4;
-    --fg-muted: #a8adba;
-    --fg-subtle: #838a99;
-    --accent: var(--accent-400);
-    --accent-hover: #9a8cff;
-    --accent-soft: rgba(99, 80, 245, 0.14);
-    --focus-ring: var(--accent-400);
+    --bg: #0b0b0d;
+    --bg-elevated: #131316;
+    --bg-sunken: #08080a;
+    --bg-inset: #1a1a1e;
+    --bg-code: #08080a;
+    --border: #232327;
+    --border-strong: #34343b;
+    --fg: #f7f7f8;
+    --fg-muted: #a5a5b0;
+    --fg-subtle: #8b8b96;
+    --fg-faint: #63636d;
 
-    --success-700: #6ee7b0;
-    --success-500: #2fbd82;
-    --success-100: rgba(18, 156, 99, 0.18);
-    --warning-700: #f5c168;
-    --warning-500: #d99522;
-    --warning-100: rgba(196, 123, 10, 0.18);
-    --danger-700: #ff9c95;
-    --danger-500: #e5544b;
-    --danger-100: rgba(211, 60, 52, 0.18);
+    --accent: var(--fg);
+    --accent-hover: #ffffff;
+    --accent-fg: #0b0b0d;
+    --accent-soft: var(--bg-inset);
+    --accent-200: #34343b;
+    --accent-400: #8b8b96;
+    --focus-ring: var(--fg);
 
-    --type-datetime: #c4a4f5;
-    --type-datetime-bg: rgba(122, 63, 212, 0.2);
-    --type-numeric: #8ec5f0;
-    --type-numeric-bg: rgba(22, 104, 179, 0.22);
-    --type-categorical: #6fd8c4;
-    --type-categorical-bg: rgba(15, 127, 108, 0.22);
-    --type-geo: #f0a877;
-    --type-geo-bg: rgba(176, 86, 29, 0.22);
-    --type-text: #a8adba;
-    --type-text-bg: rgba(168, 173, 186, 0.14);
+    --success-700: #62d59c;
+    --success-500: #34c17f;
+    --success-100: rgb(52 193 127 / 0.15);
+    --warning-700: #e9b660;
+    --warning-500: #d19a2e;
+    --warning-100: rgb(209 154 46 / 0.15);
+    --danger-700: #f4938b;
+    --danger-500: #e05a50;
+    --danger-100: rgb(224 90 80 / 0.15);
 
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.45);
+    --type-datetime: var(--fg-muted);
+    --type-datetime-bg: var(--bg-inset);
+    --type-numeric: var(--fg-muted);
+    --type-numeric-bg: var(--bg-inset);
+    --type-categorical: var(--fg-muted);
+    --type-categorical-bg: var(--bg-inset);
+    --type-geo: var(--fg-muted);
+    --type-geo-bg: var(--bg-inset);
+    --type-text: var(--fg-subtle);
+    --type-text-bg: transparent;
+
+    /* The series ramp inverts: the first series is the brightest thing on a
+     * dark page, exactly as it is the darkest thing on a light one. */
+    --chart-1: #f7f7f8;
+    --chart-2: #7c7c88;
+    --chart-3: #c2c2cc;
+    --chart-4: #55555f;
+    --chart-5: #9e9eaa;
+    --chart-6: #3a3a42;
+
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.5);
+    --shadow-md: 0 1px 3px rgb(0 0 0 / 0.4), 0 12px 32px rgb(0 0 0 / 0.55);
   }
 }
